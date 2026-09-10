@@ -1,4 +1,4 @@
-# nhom_duc_thuy
+# nhom_duc_thuy_tung_toan
 
 A new Flutter project.
 
