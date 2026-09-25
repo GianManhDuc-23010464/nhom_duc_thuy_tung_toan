@@ -1,122 +1,275 @@
+// main.dart - FLASHCARD APP WITH AUTH FLOW
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'pages/home_page.dart';
+import 'pages/stats_page.dart';
+import 'pages/profile_page.dart';
+import 'pages/login_page.dart';
+import 'pages/register_page.dart';
+import 'services/flashcard_service.dart';
+import 'services/auth_service.dart';
+import 'theme/app_theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const FlashcardApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// Trạng thái xác thực
+enum AuthStatus {
+  loading,
+  unauthenticated,
+  authenticated,
+}
 
-  // This widget is the root of your application.
+class FlashcardApp extends StatefulWidget {
+  const FlashcardApp({super.key});
+
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+  State<FlashcardApp> createState() => _FlashcardAppState();
+}
+
+class _FlashcardAppState extends State<FlashcardApp> {
+  int _currentIndex = 0;
+  ThemeMode _themeMode = ThemeMode.light;
+  AuthStatus _authStatus = AuthStatus.loading;
+  bool _showLogin = false; // true: hiển thị login, false: hiển thị register
+
+  final List<Widget> _pages = [
+    const HomePage(),
+    const StatsPage(),
+    const ProfilePage(),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  // Khởi tạo app - kiểm tra trạng thái đăng nhập và theme
+  Future<void> _initializeApp() async {
+    try {
+      final authService = AuthService();
+      final flashcardService = FlashcardService();
+
+      // Kiểm tra theme và đăng nhập song song
+      final results = await Future.wait([
+        flashcardService.isDarkMode(),
+        authService.isLoggedIn(),
+      ]);
+
+      final isDark = results[0] as bool;
+      final isLoggedIn = results[1] as bool;
+
+      if (mounted) {
+        setState(() {
+          _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+          _authStatus = isLoggedIn ? AuthStatus.authenticated : AuthStatus.unauthenticated;
+          _showLogin = false; // Mặc định hiển thị trang đăng ký đầu tiên
+        });
+      }
+    } catch (e) {
+      // Nếu có lỗi, mặc định là chưa đăng nhập
+      if (mounted) {
+        setState(() {
+          _authStatus = AuthStatus.unauthenticated;
+          _showLogin = false;
+        });
+      }
+    }
+  }
+
+  // Cập nhật theme
+  void _updateTheme(bool isDark) {
+    setState(() {
+      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+    });
+    FlashcardService().setDarkMode(isDark);
+  }
+
+  // Đăng nhập thành công
+  void _onLoginSuccess() {
+    setState(() {
+      _authStatus = AuthStatus.authenticated;
+      _currentIndex = 0; // Về trang chủ
+    });
+  }
+
+  // Đăng xuất
+  void _onLogout() {
+    setState(() {
+      _authStatus = AuthStatus.unauthenticated;
+      _showLogin = false; // Hiển thị trang đăng ký sau khi logout
+      _currentIndex = 0;
+    });
+  }
+
+  // Đăng ký thành công - chuyển sang trang đăng nhập
+  void _onRegisterSuccess() {
+    setState(() {
+      _showLogin = true;
+    });
+
+    // Hiển thị thông báo thành công
+    ScaffoldMessenger.of(GlobalKey<NavigatorState>().currentContext!).showSnackBar(
+      const SnackBar(
+        content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 3),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
-}
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
+  // Chuyển đến trang đăng nhập
+  void _navigateToLogin() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _showLogin = true;
+    });
+  }
+
+  // Chuyển đến trang đăng ký
+  void _navigateToRegister() {
+    setState(() {
+      _showLogin = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(_updateTheme, _onLogout),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Flashcard Pro',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: _themeMode,
+            home: _buildCurrentPage(),
+          );
+        },
       ),
+    );
+  }
+
+  // Xây dựng trang hiện tại dựa trên trạng thái auth
+  Widget _buildCurrentPage() {
+    switch (_authStatus) {
+      case AuthStatus.loading:
+        return _buildLoadingScreen();
+
+      case AuthStatus.unauthenticated:
+        return _showLogin
+            ? LoginPage(
+          onLoginSuccess: _onLoginSuccess,
+          onNavigateToRegister: _navigateToRegister,
+        )
+            : RegisterPage(
+          onRegisterSuccess: _onRegisterSuccess,
+          onNavigateToLogin: _navigateToLogin,
+        );
+
+      case AuthStatus.authenticated:
+        return _buildMainApp();
+    }
+  }
+
+  // Màn hình loading
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      backgroundColor: _themeMode == ThemeMode.dark
+          ? const Color(0xFF121212)
+          : const Color(0xFFF5F5F5),
       body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('You have pushed the button this many times:'),
+            // Logo app
+            Icon(
+              Icons.library_books,
+              size: 80,
+              color: _themeMode == ThemeMode.dark
+                  ? Colors.purple.shade300
+                  : Colors.blue.shade700,
+            ),
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              'Flashcard Pro',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: _themeMode == ThemeMode.dark ? Colors.white : Colors.black,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Đang tải...',
+              style: TextStyle(
+                color: _themeMode == ThemeMode.dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                fontSize: 16,
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+    );
+  }
+
+  // App chính sau khi đăng nhập
+  Widget _buildMainApp() {
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        backgroundColor: _themeMode == ThemeMode.dark
+            ? const Color(0xFF1E1E1E)
+            : Colors.white,
+        selectedItemColor: _themeMode == ThemeMode.dark
+            ? const Color(0xFF9C27B0) // Màu tím trong dark mode
+            : const Color(0xFF3F51B5), // Màu xanh trong light mode
+        unselectedItemColor: Colors.grey,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Trang chủ',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Thống kê',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Cá nhân',
+          ),
+        ],
       ),
     );
+  }
+}
+
+// Provider quản lý theme và logout
+class ThemeProvider extends ChangeNotifier {
+  final Function(bool) onThemeChanged;
+  final VoidCallback onLogout;
+
+  ThemeProvider(this.onThemeChanged, this.onLogout);
+
+  void toggleTheme(bool isDark) {
+    onThemeChanged(isDark);
+    notifyListeners();
+  }
+
+  void logout() {
+    onLogout();
+    notifyListeners();
   }
 }
