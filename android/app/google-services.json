@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "975960129581",
+    "project_id": "nhomdttt-2026",
+    "storage_bucket": "nhomdttt-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975960129581:android:0c32d576fdc32e8e1bf8a4",
+        "android_client_info": {
+          "package_name": "com.ducthuytungtoan.flashcard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJJWnWtWkz2DTtEMCEMBSzbVg0BqD-mxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975960129581:android:3ac23401e5b384191bf8a4",
+        "android_client_info": {
+          "package_name": "com.example.flashcard_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJJWnWtWkz2DTtEMCEMBSzbVg0BqD-mxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:975960129581:android:186a39429ccbe7541bf8a4",
+        "android_client_info": {
+          "package_name": "com.example.nhom_duc_thuy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJJWnWtWkz2DTtEMCEMBSzbVg0BqD-mxs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
