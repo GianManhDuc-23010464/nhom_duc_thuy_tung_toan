@@ -4,9 +4,8 @@
 
 ## Mục lục
 
-- [Ảnh giao diện](#ảnh-giao-diện)
 - [Chức năng chính](#chức-năng-chính)
-- [1. Wireframe và Flow of Work](#1-wireframe-các-màn-hình-và-flow-of-work)
+- [1. Ảnh màn hình thực tế và Flow of Work](#1-ảnh-màn-hình-thực-tế-và-flow-of-work)
 - [2. Số lượng màn hình và Bottom Navigation Bar](#2-số-lượng-màn-hình-và-bottom-navigation-bar)
 - [3. Phân công công việc](#3-phân-công-công-việc)
 - [4. Commit code vào repository chung](#4-commit-code-vào-repository-chung)
@@ -15,23 +14,6 @@
 - [Cài đặt và chạy dự án](#cài-đặt-và-chạy-dự-án)
 - [Kiểm thử](#kiểm-thử)
 - [Lịch sử commit](#lịch-sử-commit)
-
-## Ảnh giao diện
-
-Ba màn hình chính được truy cập bằng `BottomNavigationBar`:
-
-<table>
-  <tr>
-    <th>Trang chủ</th>
-    <th>Thống kê</th>
-    <th>Cá nhân</th>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/home.png" alt="Màn hình Trang chủ" width="240"></td>
-    <td><img src="docs/screenshots/stats.png" alt="Màn hình Thống kê" width="240"></td>
-    <td><img src="docs/screenshots/profile.png" alt="Màn hình Cá nhân" width="240"></td>
-  </tr>
-</table>
 
 ## Chức năng chính
 
@@ -44,15 +26,36 @@ Ba màn hình chính được truy cập bằng `BottomNavigationBar`:
 - Theo dõi tổng số bộ, số thẻ, mục tiêu ngày, tiến độ và chuỗi ngày học.
 - Chuyển đổi giao diện sáng/tối và lưu cài đặt theo tài khoản.
 
-## 1. Wireframe các màn hình và Flow of Work
+## 1. Ảnh màn hình thực tế và Flow of Work
 
 Ứng dụng có 5 màn hình chức năng chính: `HomePage`, `StatsPage`, `ProfilePage`, `LearnPage` và `TestPage`. Các màn hình hỗ trợ gồm `LoginPage`, `RegisterPage`, `SetDetailPage`, `AddSetPage` và `AddEditFlashcardPage`.
 
-### Wireframe giao diện
+### Ảnh chụp màn hình thực tế
 
-<p align="center">
-  <img src="docs/wireframes/app-wireframes.svg" alt="Wireframe 5 màn hình chính của Flashcard Pro" width="1000">
-</p>
+Các ảnh dưới đây được chụp trực tiếp từ ứng dụng đang chạy trên iOS Simulator.
+
+<table>
+  <tr>
+    <th>HomePage</th>
+    <th>StatsPage</th>
+    <th>ProfilePage</th>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/home.png" alt="Màn hình HomePage thực tế" width="240"></td>
+    <td><img src="docs/screenshots/stats.png" alt="Màn hình StatsPage thực tế" width="240"></td>
+    <td><img src="docs/screenshots/profile.png" alt="Màn hình ProfilePage thực tế" width="240"></td>
+  </tr>
+  <tr>
+    <th>LearnPage</th>
+    <th>TestPage</th>
+    <th></th>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/learn.png" alt="Màn hình LearnPage thực tế" width="240"></td>
+    <td><img src="docs/screenshots/test.png" alt="Màn hình TestPage thực tế" width="240"></td>
+    <td></td>
+  </tr>
+</table>
 
 | Màn hình | Nội dung và thao tác chính |
 |---|---|
@@ -207,7 +210,7 @@ Quy trình commit; chỉ push sau khi nhóm xác nhận:
 ```bash
 git status
 git add <cac-file-duoc-phan-cong>
-git commit -m "docs: update wireframes flow and team assignment"
+git commit -m "docs: add app screenshots flow and team assignment"
 ```
 
 Sau khi được xác nhận, push branch hiện tại lên remote. Ví dụ với `main`:
@@ -255,8 +258,7 @@ test/
 └── widget_test.dart          # Smoke test màn hình xác thực
 
 docs/
-├── screenshots/              # Ảnh minh chứng ba tab chính
-└── wireframes/               # Wireframe đồ họa năm màn hình chính
+└── screenshots/              # Ảnh thực tế của năm màn hình chính
 
 firestore.rules               # Phân quyền dữ liệu Firestore theo UID
 storage.rules                 # Phân quyền Firebase Storage theo UID
