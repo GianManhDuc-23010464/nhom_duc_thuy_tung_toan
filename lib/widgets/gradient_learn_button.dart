@@ -52,8 +52,8 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
     );
 
     _colorAnimation = ColorTween(
-      begin: Colors.white.withOpacity(0.2),
-      end: Colors.white.withOpacity(0.4),
+      begin: Colors.white.withValues(alpha: 0.2),
+      end: Colors.white.withValues(alpha: 0.4),
     ).animate(
       CurvedAnimation(
         parent: _pulseController,
@@ -136,20 +136,20 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
               boxShadow: widget.isEnabled
                   ? [
                 BoxShadow(
-                  color: Colors.purple.withOpacity(0.4),
+                  color: Colors.purple.withValues(alpha: 0.4),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                   spreadRadius: 2,
                 ),
                 BoxShadow(
-                  color: Colors.blue.withOpacity(0.3),
+                  color: Colors.blue.withValues(alpha: 0.3),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
               ]
                   : [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Colors.grey.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -171,8 +171,8 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
                       onTapDown: widget.isEnabled ? _onTapDown : null,
                       onTapUp: widget.isEnabled ? _onTapUp : null,
                       onTapCancel: widget.isEnabled ? _onTapCancel : null,
-                      splashColor: Colors.white.withOpacity(0.3),
-                      highlightColor: Colors.white.withOpacity(0.2),
+                      splashColor: Colors.white.withValues(alpha: 0.3),
+                      highlightColor: Colors.white.withValues(alpha: 0.2),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 24),
                         child: Row(
@@ -216,7 +216,7 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: widget.isEnabled
-                                            ? Colors.white.withOpacity(0.8)
+                                            ? Colors.white.withValues(alpha: 0.8)
                                             : Colors.grey.shade300,
                                       ),
                                     ),
@@ -234,12 +234,12 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
                                 ),
                                 decoration: BoxDecoration(
                                   color: widget.isEnabled
-                                      ? Colors.white.withOpacity(0.2)
-                                      : Colors.grey.withOpacity(0.3),
+                                      ? Colors.white.withValues(alpha: 0.2)
+                                      : Colors.grey.withValues(alpha: 0.3),
                                   borderRadius: BorderRadius.circular(20),
                                   border: widget.isEnabled
                                       ? Border.all(
-                                    color: Colors.white.withOpacity(0.3),
+                                    color: Colors.white.withValues(alpha: 0.3),
                                     width: 1,
                                   )
                                       : null,
@@ -270,7 +270,7 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
                               const SizedBox(width: 12),
                               Icon(
                                 Icons.arrow_forward_ios_rounded,
-                                color: Colors.white.withOpacity(0.8),
+                                color: Colors.white.withValues(alpha: 0.8),
                                 size: 20,
                               ),
                             ],
@@ -285,7 +285,7 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
                     Container(
                       height: 1,
                       margin: const EdgeInsets.symmetric(horizontal: 20),
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withValues(alpha: 0.3),
                     ),
                     Expanded(
                       child: Transform.scale(
@@ -299,8 +299,8 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
                           onTapDown: widget.isEnabled ? _onTestTapDown : null,
                           onTapUp: widget.isEnabled ? _onTestTapUp : null,
                           onTapCancel: widget.isEnabled ? _onTestTapCancel : null,
-                          splashColor: Colors.orange.withOpacity(0.3),
-                          highlightColor: Colors.orange.withOpacity(0.2),
+                          splashColor: Colors.orange.withValues(alpha: 0.3),
+                          highlightColor: Colors.orange.withValues(alpha: 0.2),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Row(
@@ -309,7 +309,7 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
                                 Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Colors.white.withValues(alpha: 0.2),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(
@@ -338,7 +338,7 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: widget.isEnabled
-                                                ? Colors.white.withOpacity(0.8)
+                                                ? Colors.white.withValues(alpha: 0.8)
                                                 : Colors.grey.shade300,
                                           ),
                                         ),
@@ -349,7 +349,7 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: Colors.orange.withOpacity(0.3),
+                                      color: Colors.orange.withValues(alpha: 0.3),
                                       borderRadius: BorderRadius.circular(15),
                                     ),
                                     child: Text(
@@ -364,7 +364,7 @@ class _GradientLearnButtonState extends State<GradientLearnButton>
                                 const SizedBox(width: 12),
                                 Icon(
                                   Icons.arrow_forward_ios_rounded,
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                   size: 16,
                                 ),
                               ],

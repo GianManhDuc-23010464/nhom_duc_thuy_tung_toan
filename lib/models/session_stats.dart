@@ -13,7 +13,8 @@ class SessionStats {
     required this.timeSpent,
   });
 
-  double get retentionRate => cardsReviewed > 0 ? (correctAnswers / cardsReviewed) * 100 : 0;
+  double get retentionRate =>
+      cardsReviewed > 0 ? (correctAnswers / cardsReviewed) * 100 : 0;
 
   Map<String, dynamic> toJson() => {
     'userId': userId, // NEW

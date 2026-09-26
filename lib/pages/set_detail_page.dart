@@ -29,16 +29,16 @@ class _SetDetailPageState extends State<SetDetailPage> {
     _loadCurrentSet();
   }
 
-  Future<void> _loadCurrentSet() async {
+  Future<void> _loadCurrentSet({bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
     });
 
-    await _service.loadData();
+    await _service.loadData(forceRefresh: forceRefresh);
     _allSets = _service.sets;
 
     final updatedSet = _allSets.firstWhere(
-          (set) => set.id == _currentSet.id,
+      (set) => set.id == _currentSet.id,
       orElse: () => _currentSet,
     );
 
@@ -51,12 +51,7 @@ class _SetDetailPageState extends State<SetDetailPage> {
   }
 
   void _refresh() async {
-    await _loadCurrentSet();
-  }
-
-  // Tính số thẻ đã thành thạo
-  int _getMasteredCount() {
-    return _currentSet.cards.where((card) => card.mastered).length;
+    await _loadCurrentSet(forceRefresh: true);
   }
 
   @override
@@ -99,8 +94,8 @@ class _SetDetailPageState extends State<SetDetailPage> {
       body: _isLoading ? _buildLoading() : _buildBody(),
       floatingActionButton: FloatingActionButton(
         onPressed: _addCard,
-        child: const Icon(Icons.add),
         tooltip: "Thêm thẻ mới",
+        child: const Icon(Icons.add),
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
@@ -144,7 +139,11 @@ class _SetDetailPageState extends State<SetDetailPage> {
             const SizedBox(height: 24),
             const Text(
               "Bộ thẻ trống",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
             ),
             const SizedBox(height: 12),
             const Text(
@@ -165,11 +164,6 @@ class _SetDetailPageState extends State<SetDetailPage> {
   }
 
   Widget _buildStatsHeader() {
-    final masteredCount = _getMasteredCount();
-    final masteredPercent = _currentSet.cards.isNotEmpty
-        ? (masteredCount / _currentSet.cards.length * 100).round()
-        : 0;
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -177,7 +171,7 @@ class _SetDetailPageState extends State<SetDetailPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -187,9 +181,11 @@ class _SetDetailPageState extends State<SetDetailPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem("Tổng thẻ", _currentSet.cards.length.toString(), Icons.credit_card),
-
-
+          _buildStatItem(
+            "Tổng thẻ",
+            _currentSet.cards.length.toString(),
+            Icons.credit_card,
+          ),
         ],
       ),
     );
@@ -211,10 +207,7 @@ class _SetDetailPageState extends State<SetDetailPage> {
           value,
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
@@ -237,7 +230,7 @@ class _SetDetailPageState extends State<SetDetailPage> {
       margin: const EdgeInsets.symmetric(vertical: 4),
       elevation: 2,
       child: Dismissible(
-        key: Key('${card.term}_$index'),
+        key: Key(card.id),
         direction: DismissDirection.endToStart,
         confirmDismiss: (direction) async {
           return await _showDeleteCardDialog(card);
@@ -250,7 +243,9 @@ class _SetDetailPageState extends State<SetDetailPage> {
         ),
         child: ListTile(
           leading: CircleAvatar(
-            backgroundColor: card.mastered ? Colors.green[100] : Colors.blue[100],
+            backgroundColor: card.mastered
+                ? Colors.green[100]
+                : Colors.blue[100],
             child: Icon(
               card.mastered ? Icons.star : Icons.credit_card,
               color: card.mastered ? Colors.green : Colors.blue,
@@ -300,7 +295,7 @@ class _SetDetailPageState extends State<SetDetailPage> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, -2),
             ),
@@ -309,40 +304,42 @@ class _SetDetailPageState extends State<SetDetailPage> {
         child: GradientLearnButton(
           onPressed: _currentSet.cards.isEmpty
               ? () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Hãy thêm thẻ để bắt đầu học!"),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Hãy thêm thẻ để bắt đầu học!"),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
               : () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => LearnPage(
-                cards: _currentSet.cards,
-                setName: _currentSet.title,
-              ),
-            ),
-          ),
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => LearnPage(
+                      cards: _currentSet.cards,
+                      setName: _currentSet.title,
+                      setId: _currentSet.id,
+                    ),
+                  ),
+                ),
           onTestPressed: _currentSet.cards.isEmpty
               ? () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Hãy thêm thẻ để bắt đầu kiểm tra!"),
-                duration: Duration(seconds: 2),
-              ),
-            );
-          }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Hãy thêm thẻ để bắt đầu kiểm tra!"),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
               : () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TestPage(
-                cards: _currentSet.cards,
-                setName: _currentSet.title,
-              ),
-            ),
-          ),
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TestPage(
+                      cards: _currentSet.cards,
+                      setName: _currentSet.title,
+                      setId: _currentSet.id,
+                    ),
+                  ),
+                ),
           cardCount: _currentSet.cards.length,
           isEnabled: _currentSet.cards.isNotEmpty,
           showTestButton: true,
@@ -357,12 +354,17 @@ class _SetDetailPageState extends State<SetDetailPage> {
       context,
       MaterialPageRoute(
         builder: (_) => AddEditFlashcardPage(
-          onSave: (card) async {
-            await _service.addCard(_currentSet.id, card);
-            _refresh();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Đã thêm thẻ mới!")),
+          onSave: (card, imageFilePath) async {
+            await _service.addCard(
+              _currentSet.id,
+              card,
+              imageFilePath: imageFilePath,
             );
+            if (!mounted) return;
+            _refresh();
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text("Đã thêm thẻ mới!")));
           },
         ),
       ),
@@ -375,12 +377,18 @@ class _SetDetailPageState extends State<SetDetailPage> {
       MaterialPageRoute(
         builder: (_) => AddEditFlashcardPage(
           card: card,
-          onSave: (newCard) async {
-            await _service.updateCard(_currentSet.id, card.term, newCard);
-            _refresh();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Đã cập nhật thẻ!")),
+          onSave: (newCard, imageFilePath) async {
+            await _service.updateCard(
+              _currentSet.id,
+              card.id,
+              newCard,
+              imageFilePath: imageFilePath,
             );
+            if (!mounted) return;
+            _refresh();
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text("Đã cập nhật thẻ!")));
           },
         ),
       ),
@@ -407,11 +415,12 @@ class _SetDetailPageState extends State<SetDetailPage> {
     );
 
     if (result == true) {
-      await _service.deleteCard(_currentSet.id, card.term);
+      await _service.deleteCard(_currentSet.id, card.id);
+      if (!mounted) return false;
       _refresh();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Đã xóa thẻ \"${card.term}\"")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Đã xóa thẻ \"${card.term}\"")));
     }
 
     return result ?? false;
@@ -422,7 +431,9 @@ class _SetDetailPageState extends State<SetDetailPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("Xóa bộ thẻ?"),
-        content: Text("Bạn có chắc muốn xóa bộ thẻ \"${_currentSet.title}\" và tất cả ${_currentSet.cards.length} thẻ bên trong?"),
+        content: Text(
+          "Bạn có chắc muốn xóa bộ thẻ \"${_currentSet.title}\" và tất cả ${_currentSet.cards.length} thẻ bên trong?",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -435,7 +446,9 @@ class _SetDetailPageState extends State<SetDetailPage> {
                 Navigator.pop(context);
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Đã xóa bộ thẻ \"${_currentSet.title}\"")),
+                  SnackBar(
+                    content: Text("Đã xóa bộ thẻ \"${_currentSet.title}\""),
+                  ),
                 );
               }
             },
@@ -462,19 +475,21 @@ class _SetDetailPageState extends State<SetDetailPage> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Hủy")
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Hủy"),
           ),
           TextButton(
             onPressed: () async {
               if (controller.text.trim().isNotEmpty) {
-                await _service.updateSet(_currentSet.id, controller.text.trim());
+                await _service.updateSet(
+                  _currentSet.id,
+                  controller.text.trim(),
+                );
+                if (!mounted) return;
                 setState(() {
-                  _currentSet = FlashcardSet(
-                      id: _currentSet.id,
-                      userId: _currentSet.userId,
-                      title: controller.text.trim(),
-                      cards: _currentSet.cards
+                  _currentSet = _currentSet.copyWith(
+                    title: controller.text.trim(),
+                    updatedAt: DateTime.now(),
                   );
                 });
                 Navigator.pop(context);

@@ -1,113 +1,139 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:crypto/crypto.dart';
-import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+
 import '../models/user.dart';
 
 class AuthService {
-  static const String _usersKey = 'users';
-  static const String _currentUserKey = 'currentUser';
-  final Uuid _uuid = Uuid();
+  AuthService({firebase_auth.FirebaseAuth? auth, FirebaseFirestore? firestore})
+    : _auth = auth ?? firebase_auth.FirebaseAuth.instance,
+      _firestore = firestore ?? FirebaseFirestore.instance;
 
-  String _hashPassword(String password) {
-    return sha256.convert(utf8.encode(password)).toString();
-  }
+  final firebase_auth.FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
 
-  Future<Map<String, User>> _getUsers() async {
-    final prefs = await SharedPreferences.getInstance();
-    final usersJson = prefs.getString(_usersKey);
+  String? lastErrorCode;
 
-    if (usersJson == null) return {};
+  Stream<firebase_auth.User?> get authStateChanges => _auth.authStateChanges();
 
-    final Map<String, dynamic> usersMap = json.decode(usersJson);
-    final Map<String, User> users = {};
-
-    usersMap.forEach((email, userJson) {
-      users[email] = User.fromJson(userJson);
-    });
-
-    return users;
-  }
-
-  Future<void> _saveUsers(Map<String, User> users) async {
-    final prefs = await SharedPreferences.getInstance();
-    final Map<String, dynamic> usersMap = {};
-
-    users.forEach((email, user) {
-      usersMap[email] = user.toJson();
-    });
-
-    await prefs.setString(_usersKey, json.encode(usersMap));
-  }
-
-  // Đăng ký user mới - ĐÃ HOÀN THIỆN
   Future<bool> register(String username, String email, String password) async {
-    final users = await _getUsers();
-
-    if (users.containsKey(email)) {
-      return false;
-    }
-
-    final newUser = User(
-      username: username,
-      email: email,
-      passwordHash: _hashPassword(password),
-      createdAt: DateTime.now(),
-    );
-
-    users[email] = newUser;
-    await _saveUsers(users);
-    await setCurrentUser(newUser);
-
-    return true;
-  }
-
-  // Đăng nhập - ĐÃ HOÀN THIỆN
-  Future<bool> login(String email, String password) async {
-    final users = await _getUsers();
-    final user = users[email];
-
-    if (user == null) return false;
-
-    final passwordHash = _hashPassword(password);
-    if (user.passwordHash == passwordHash) {
-      await setCurrentUser(user);
-      return true;
-    }
-
-    return false;
-  }
-
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_currentUserKey);
-  }
-
-  Future<void> setCurrentUser(User user) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_currentUserKey, json.encode(user.toJson()));
-  }
-
-  Future<User?> getCurrentUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString(_currentUserKey);
-
-    if (userJson == null) return null;
+    lastErrorCode = null;
+    firebase_auth.UserCredential? credential;
 
     try {
-      return User.fromJson(json.decode(userJson));
-    } catch (e) {
-      return null;
+      credential = await _auth.createUserWithEmailAndPassword(
+        email: email.trim().toLowerCase(),
+        password: password,
+      );
+
+      final firebaseUser = credential.user!;
+      await firebaseUser.updateDisplayName(username.trim());
+
+      final now = DateTime.now();
+      final user = User(
+        id: firebaseUser.uid,
+        username: username.trim(),
+        email: firebaseUser.email ?? email.trim().toLowerCase(),
+        createdAt: now,
+      );
+
+      final batch = _firestore.batch();
+      batch.set(
+        _firestore.collection('users').doc(firebaseUser.uid),
+        user.toFirestore(),
+      );
+      batch.set(
+        _firestore
+            .collection('users')
+            .doc(firebaseUser.uid)
+            .collection('stats')
+            .doc('summary'),
+        {
+          'streak': 0,
+          'todayStudied': 0,
+          'todayDate': '',
+          'lastStudyDate': '',
+          'totalTests': 0,
+          'totalMastered': 0,
+          'updatedAt': Timestamp.fromDate(now),
+        },
+      );
+      await batch.commit();
+
+      await _auth.signOut();
+      return true;
+    } on firebase_auth.FirebaseAuthException catch (error) {
+      lastErrorCode = error.code;
+      return false;
+    } on FirebaseException catch (error) {
+      lastErrorCode = 'profile-${error.code}';
+      await _deleteIncompleteRegistration(credential);
+      return false;
+    } catch (_) {
+      lastErrorCode = 'profile-write-failed';
+      await _deleteIncompleteRegistration(credential);
+      return false;
     }
   }
 
-  Future<bool> isLoggedIn() async {
-    return await getCurrentUser() != null;
+  Future<void> _deleteIncompleteRegistration(
+    firebase_auth.UserCredential? credential,
+  ) async {
+    if (credential?.user != null) {
+      try {
+        await credential!.user!.delete();
+      } catch (_) {}
+    }
+    await _auth.signOut();
   }
 
-  // NEW: Lấy ID của user hiện tại
-  Future<String?> getCurrentUserId() async {
-    final user = await getCurrentUser();
-    return user?.id;
+  Future<bool> login(String email, String password) async {
+    lastErrorCode = null;
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: email.trim().toLowerCase(),
+        password: password,
+      );
+      return true;
+    } on firebase_auth.FirebaseAuthException catch (error) {
+      lastErrorCode = error.code;
+      return false;
+    }
   }
+
+  Future<bool> sendPasswordResetEmail(String email) async {
+    lastErrorCode = null;
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim().toLowerCase());
+      return true;
+    } on firebase_auth.FirebaseAuthException catch (error) {
+      lastErrorCode = error.code;
+      return false;
+    }
+  }
+
+  Future<void> logout() => _auth.signOut();
+
+  Future<User?> getCurrentUser() async {
+    final firebaseUser = _auth.currentUser;
+    if (firebaseUser == null) return null;
+
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(firebaseUser.uid)
+        .get();
+    if (snapshot.exists && snapshot.data() != null) {
+      return User.fromFirestore(firebaseUser.uid, snapshot.data()!);
+    }
+
+    return User(
+      id: firebaseUser.uid,
+      username: firebaseUser.displayName ?? 'Người dùng',
+      email: firebaseUser.email ?? '',
+      createdAt: firebaseUser.metadata.creationTime ?? DateTime.now(),
+    );
+  }
+
+  Future<bool> isLoggedIn() async => _auth.currentUser != null;
+
+  Future<String?> getCurrentUserId() async => _auth.currentUser?.uid;
 }

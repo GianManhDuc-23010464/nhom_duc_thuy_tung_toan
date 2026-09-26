@@ -31,12 +31,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   // NEW: Tải dữ liệu từ service
-  Future<void> _loadData() async {
+  Future<void> _loadData({bool forceRefresh = false}) async {
     setState(() {
       _isLoading = true;
     });
 
-    await _service.loadData();
+    await _service.loadData(forceRefresh: forceRefresh);
 
     if (mounted) {
       setState(() {
@@ -47,7 +47,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _refresh() async {
-    await _loadData(); // NEW: Tải lại dữ liệu
+    await _loadData(forceRefresh: true); // NEW: Tải lại dữ liệu
   }
 
   @override
@@ -94,11 +94,11 @@ class _HomePageState extends State<HomePage> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                  },
-                )
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      )
                     : null,
                 filled: true,
                 fillColor: Colors.white,
@@ -113,18 +113,22 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator()) // NEW: Loading indicator
+          ? const Center(
+              child: CircularProgressIndicator(),
+            ) // NEW: Loading indicator
           : _buildBody(filteredSets),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AddSetPage()), // NEW: Dùng AddSetPage mới
+            MaterialPageRoute(
+              builder: (_) => const AddSetPage(),
+            ), // NEW: Dùng AddSetPage mới
           );
           _refresh();
         },
-        child: const Icon(Icons.add),
         tooltip: "Tạo bộ thẻ mới",
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -166,8 +170,10 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildStatItem("Tổng bộ", filteredSets.length.toString()),
-              _buildStatItem("Tổng thẻ", _calculateTotalCards(filteredSets).toString()),
-
+              _buildStatItem(
+                "Tổng thẻ",
+                _calculateTotalCards(filteredSets).toString(),
+              ),
             ],
           ),
         ),
@@ -202,10 +208,7 @@ class _HomePageState extends State<HomePage> {
             color: Colors.blue,
           ),
         ),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
@@ -247,7 +250,7 @@ class _HomePageState extends State<HomePage> {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: colorPair[0].withOpacity(0.3),
+                color: colorPair[0].withValues(alpha: 0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -262,7 +265,7 @@ class _HomePageState extends State<HomePage> {
                 child: Icon(
                   Icons.library_books,
                   size: 80,
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
               Padding(
@@ -284,28 +287,30 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.card_membership, color: Colors.white, size: 16),
+                        const Icon(
+                          Icons.card_membership,
+                          color: Colors.white,
+                          size: 16,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           "${set.cards.length} thẻ",
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withValues(alpha: 0.9),
                             fontSize: 14,
                           ),
                         ),
                       ],
                     ),
                     // NEW: Hiển thị ngày tạo
-                    if (set.createdAt != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        "Tạo: ${_formatDate(set.createdAt!)}",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 10,
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Tạo: ${_formatDate(set.createdAt)}",
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 10,
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
@@ -315,7 +320,10 @@ class _HomePageState extends State<HomePage> {
                   top: 8,
                   right: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.orange,
                       borderRadius: BorderRadius.circular(10),
@@ -339,9 +347,8 @@ class _HomePageState extends State<HomePage> {
 
   // NEW: Kiểm tra set mới (tạo trong 7 ngày)
   bool _isNewSet(FlashcardSet set) {
-    if (set.createdAt == null) return false;
     final now = DateTime.now();
-    final difference = now.difference(set.createdAt!);
+    final difference = now.difference(set.createdAt);
     return difference.inDays < 7;
   }
 
@@ -380,7 +387,10 @@ class _HomePageState extends State<HomePage> {
               ),
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Xóa bộ thẻ', style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Xóa bộ thẻ',
+                  style: TextStyle(color: Colors.red),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _showDeleteDialog(set);
@@ -398,7 +408,7 @@ class _HomePageState extends State<HomePage> {
     final controller = TextEditingController(text: set.title);
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Đổi tên bộ thẻ"),
         content: TextField(
           controller: controller,
@@ -409,15 +419,16 @@ class _HomePageState extends State<HomePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text("Hủy"),
           ),
           TextButton(
             onPressed: () async {
               if (controller.text.trim().isNotEmpty) {
                 await _service.updateSet(set.id, controller.text.trim());
+                if (!dialogContext.mounted) return;
                 _refresh();
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
               }
             },
             child: const Text("Lưu"),
@@ -431,19 +442,20 @@ class _HomePageState extends State<HomePage> {
   void _showDeleteDialog(FlashcardSet set) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Xóa bộ thẻ?"),
         content: Text("Bạn có chắc muốn xóa bộ \"${set.title}\"?"),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text("Hủy"),
           ),
           TextButton(
             onPressed: () async {
               await _service.deleteSet(set.id);
+              if (!dialogContext.mounted) return;
               _refresh();
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
             },
             child: const Text("Xóa", style: TextStyle(color: Colors.red)),
           ),

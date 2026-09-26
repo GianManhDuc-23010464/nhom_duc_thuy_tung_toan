@@ -16,9 +16,7 @@ class _AddEditSetPageState extends State<AddEditSetPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Tạo bộ mới"),
-      ),
+      appBar: AppBar(title: const Text("Tạo bộ mới")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -41,11 +39,14 @@ class _AddEditSetPageState extends State<AddEditSetPage> {
                   return;
                 }
                 await _service.addSet(title);
-                if (mounted) Navigator.pop(context);
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text("Tạo bộ", style: TextStyle(fontSize: 18)),
             ),
