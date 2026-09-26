@@ -64,7 +64,7 @@ Ba màn hình chính được truy cập bằng `BottomNavigationBar`:
 │  └──────────────────────────┘  │
 │                         [+]    │
 ├────────────────────────────────┤
-│ Trang chủ │ Thống kê │ Cá nhân│
+│ Trang chủ │ Thống kê │ Cá nhân │
 └────────────────────────────────┘
 ```
 
@@ -74,10 +74,10 @@ HomePage hiển thị lời chào, ô tìm kiếm, danh sách bộ thẻ, số l
 
 ```text
 ┌────────────────────────────────┐
-│       THỐNG KÊ HỌC TẬP        │
+│       THỐNG KÊ HỌC TẬP         │
 │                                │
-│  Tổng bộ: 5    Tổng thẻ: 100  │
-│  Hôm nay: 20   Mục tiêu: 20   │
+│  Tổng bộ: 5    Tổng thẻ: 100   │
+│  Hôm nay: 20   Mục tiêu: 20    │
 │  Streak: 7 ngày                │
 │  Tỷ lệ ghi nhớ: 80%            │
 │                                │
@@ -86,7 +86,7 @@ HomePage hiển thị lời chào, ô tìm kiếm, danh sách bộ thẻ, số l
 │  │   ▂ ▅ ▃ ▇ ▆ █ ▅          │  │
 │  └──────────────────────────┘  │
 ├────────────────────────────────┤
-│ Trang chủ │ Thống kê │ Cá nhân│
+│ Trang chủ │ Thống kê │ Cá nhân │
 └────────────────────────────────┘
 ```
 
@@ -102,11 +102,11 @@ StatsPage tổng hợp tổng số bộ, tổng số thẻ, số thẻ đã họ
 │          Nguyễn Văn A          │
 │       user@example.com         │
 │                                │
-│  Mục tiêu mỗi ngày: 20 thẻ [✎]│
+│  Mục tiêu mỗi ngày: 20 thẻ [✎] │
 │  Dark Mode                 [◉] │
 │  [ ĐĂNG XUẤT ]                 │
 ├────────────────────────────────┤
-│ Trang chủ │ Thống kê │ Cá nhân│
+│ Trang chủ │ Thống kê │ Cá nhân │
 └────────────────────────────────┘
 ```
 
