@@ -48,138 +48,35 @@ Ba màn hình chính được truy cập bằng `BottomNavigationBar`:
 
 Ứng dụng có 5 màn hình chức năng chính: `HomePage`, `StatsPage`, `ProfilePage`, `LearnPage` và `TestPage`. Các màn hình hỗ trợ gồm `LoginPage`, `RegisterPage`, `SetDetailPage`, `AddSetPage` và `AddEditFlashcardPage`.
 
-### HomePage
+### Wireframe giao diện
 
-```text
-┌────────────────────────────────┐
-│         FLASHCARD PRO          │
-│                                │
-│  Xin chào, User                │
-│  [ Tìm kiếm Flashcard....... ] │
-│                                │
-│  Bộ Flashcard của bạn          │
-│  ┌──────────────────────────┐  │
-│  │ English Vocabulary       │  │
-│  │ 20 Flashcards            │  │
-│  └──────────────────────────┘  │
-│                         [+]    │
-├────────────────────────────────┤
-│ Trang chủ │ Thống kê │ Cá nhân │
-└────────────────────────────────┘
-```
+<p align="center">
+  <img src="docs/wireframes/app-wireframes.svg" alt="Wireframe 5 màn hình chính của Flashcard Pro" width="1000">
+</p>
 
-HomePage hiển thị lời chào, ô tìm kiếm, danh sách bộ thẻ, số lượng thẻ và nút tạo bộ mới. Người dùng có thể mở, đổi tên hoặc xóa một bộ flashcard.
-
-### StatsPage
-
-```text
-┌────────────────────────────────┐
-│       THỐNG KÊ HỌC TẬP         │
-│                                │
-│  Tổng bộ: 5    Tổng thẻ: 100   │
-│  Hôm nay: 20   Mục tiêu: 20    │
-│  Streak: 7 ngày                │
-│  Tỷ lệ ghi nhớ: 80%            │
-│                                │
-│  ┌──────────────────────────┐  │
-│  │     BIỂU ĐỒ THỐNG KÊ     │  │
-│  │   ▂ ▅ ▃ ▇ ▆ █ ▅          │  │
-│  └──────────────────────────┘  │
-├────────────────────────────────┤
-│ Trang chủ │ Thống kê │ Cá nhân │
-└────────────────────────────────┘
-```
-
-StatsPage tổng hợp tổng số bộ, tổng số thẻ, số thẻ đã học hôm nay, mục tiêu ngày, streak, tỷ lệ ghi nhớ và biểu đồ tiến độ.
-
-### ProfilePage
-
-```text
-┌────────────────────────────────┐
-│            CÁ NHÂN             │
-│                                │
-│            (Avatar)            │
-│          Nguyễn Văn A          │
-│       user@example.com         │
-│                                │
-│  Mục tiêu mỗi ngày: 20 thẻ [✎] │
-│  Dark Mode                 [◉] │
-│  [ ĐĂNG XUẤT ]                 │
-├────────────────────────────────┤
-│ Trang chủ │ Thống kê │ Cá nhân │
-└────────────────────────────────┘
-```
-
-ProfilePage hiển thị avatar, tên, email, mục tiêu học mỗi ngày, cài đặt Dark Mode và thao tác đăng xuất.
-
-### LearnPage
-
-```text
-┌────────────────────────────────┐
-│         HỌC FLASHCARD          │
-│             3 / 20             │
-│                                │
-│  ┌──────────────────────────┐  │
-│  │          HELLO           │  │
-│  │                          │  │
-│  │      Chạm để lật thẻ     │  │
-│  └──────────────────────────┘  │
-│                                │
-│  [ Đánh dấu thành thạo ★ ]     │
-│  [ Trước ]          [ Sau ]    │
-└────────────────────────────────┘
-```
-
-LearnPage hiển thị vị trí thẻ hiện tại, hỗ trợ lật thẻ, chuyển thẻ trước/sau, trộn thẻ và đánh dấu thẻ đã thành thạo.
-
-### TestPage
-
-```text
-┌────────────────────────────────┐
-│          KIỂM TRA              │
-│          Câu 3 / 20            │
-│                                │
-│  Từ cần kiểm tra: HELLO        │
-│  [ Nhập nghĩa của từ........ ] │
-│  [ KIỂM TRA ]                  │
-│                                │
-│  Đúng: 2          Sai: 0       │
-│  [ Quay lại ]     [ Tiếp theo ]│
-└────────────────────────────────┘
-```
-
-TestPage hiển thị câu hiện tại, từ cần kiểm tra, ô nhập đáp án, kết quả đúng/sai và thống kê số câu đúng, sai.
+| Màn hình | Nội dung và thao tác chính |
+|---|---|
+| `HomePage` | Lời chào, tìm kiếm, danh sách bộ thẻ, số lượng thẻ, tạo mới, đổi tên, xóa và mở bộ flashcard. |
+| `StatsPage` | Tổng số bộ/thẻ, số thẻ đã học, mục tiêu ngày, chuỗi ngày học, tỷ lệ ghi nhớ và biểu đồ tiến độ. |
+| `ProfilePage` | Avatar, tên, email, mục tiêu học mỗi ngày, giao diện sáng/tối và đăng xuất. |
+| `LearnPage` | Tiến độ học, lật thẻ, chuyển thẻ, trộn thứ tự và đánh dấu thẻ thành thạo. |
+| `TestPage` | Câu hỏi, ô nhập đáp án, kiểm tra đúng/sai, bỏ qua và thống kê kết quả. |
 
 ### Flow of Work
 
-```text
-Đăng ký
-   │
-   ▼
-Đăng nhập ───────────────► HomePage
-                              │
-               ┌──────────────┴──────────────┐
-               ▼                             ▼
-       Tạo bộ Flashcard              Chọn bộ Flashcard
-                                             │
-                                             ▼
-                                      SetDetailPage
-                                      │             │
-                                      ▼             ▼
-                                  LearnPage      TestPage
-                                  │              │
-                                  ├─ Xem thẻ     ├─ Nhập đáp án
-                                  ├─ Lật thẻ     ├─ Kiểm tra đúng/sai
-                                  ├─ Trước/Sau   └─ Xem kết quả
-                                  └─ Mastered
-
-HomePage ◄──── Bottom Navigation ────► StatsPage
-    │                                      │
-    └────── Bottom Navigation ──────► ProfilePage
-                                           ├─ Thông tin cá nhân
-                                           ├─ Mục tiêu học
-                                           ├─ Dark Mode
-                                           └─ Đăng xuất
+```mermaid
+flowchart TD
+    A[Đăng ký / Đăng nhập] --> B[HomePage]
+    B --> C[Tạo bộ Flashcard]
+    B --> D[Chọn bộ Flashcard]
+    D --> E[SetDetailPage]
+    E --> F[LearnPage]
+    E --> G[TestPage]
+    F --> H[Lật thẻ · Trước/Sau · Mastered]
+    G --> I[Nhập đáp án · Kiểm tra · Kết quả]
+    B <-->|Bottom Navigation| J[StatsPage]
+    B <-->|Bottom Navigation| K[ProfilePage]
+    K --> L[Thông tin · Mục tiêu · Dark Mode · Đăng xuất]
 ```
 
 ## 2. Số lượng màn hình và Bottom Navigation Bar
@@ -358,7 +255,8 @@ test/
 └── widget_test.dart          # Smoke test màn hình xác thực
 
 docs/
-└── screenshots/              # Ảnh minh chứng ba tab chính
+├── screenshots/              # Ảnh minh chứng ba tab chính
+└── wireframes/               # Wireframe đồ họa năm màn hình chính
 
 firestore.rules               # Phân quyền dữ liệu Firestore theo UID
 storage.rules                 # Phân quyền Firebase Storage theo UID
