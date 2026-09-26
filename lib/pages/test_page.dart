@@ -6,11 +6,13 @@ import '../services/flashcard_service.dart';
 class TestPage extends StatefulWidget {
   final List<Flashcard> cards;
   final String setName;
+  final String setId;
 
   const TestPage({
     super.key,
     required this.cards,
     required this.setName,
+    required this.setId,
   });
 
   @override
@@ -20,7 +22,8 @@ class TestPage extends StatefulWidget {
 class _TestPageState extends State<TestPage> {
   final FlashcardService _service = FlashcardService();
   final List<Flashcard> _testCards = [];
-  final TextEditingController _textController = TextEditingController(); // THÊM CONTROLLER
+  final TextEditingController _textController =
+      TextEditingController(); // THÊM CONTROLLER
   int _currentIndex = 0;
   int _correctCount = 0;
   int _wrongCount = 0;
@@ -47,9 +50,10 @@ class _TestPageState extends State<TestPage> {
     _testCards.shuffle();
   }
 
-  void _checkAnswer(String answer) {
+  Future<void> _checkAnswer(String answer) async {
     final currentCard = _testCards[_currentIndex];
-    final isCorrect = answer.trim().toLowerCase() == currentCard.meaning.toLowerCase();
+    final isCorrect =
+        answer.trim().toLowerCase() == currentCard.meaning.toLowerCase();
 
     setState(() {
       _showResult = true;
@@ -63,6 +67,16 @@ class _TestPageState extends State<TestPage> {
         _wrongCount++;
       }
     });
+
+    try {
+      await _service.updateLearningProgress(
+        setId: widget.setId,
+        cardId: currentCard.id,
+        isCorrect: isCorrect,
+      );
+    } catch (error) {
+      debugPrint('Không thể cập nhật tiến độ thẻ ${currentCard.id}: $error');
+    }
   }
 
   void _nextQuestion() {
@@ -84,7 +98,8 @@ class _TestPageState extends State<TestPage> {
         _currentIndex--;
         _showResult = false;
         _userAnswer = _userAnswers[_currentIndex];
-        _textController.text = _userAnswers[_currentIndex] ?? ''; // CẬP NHẬT CONTROLLER
+        _textController.text =
+            _userAnswers[_currentIndex] ?? ''; // CẬP NHẬT CONTROLLER
       });
     }
   }
@@ -165,10 +180,7 @@ class _TestPageState extends State<TestPage> {
           Text(label),
           Text(
             value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),
@@ -200,10 +212,7 @@ class _TestPageState extends State<TestPage> {
             children: [
               Icon(Icons.warning, size: 64, color: Colors.orange),
               SizedBox(height: 16),
-              Text(
-                "Không có thẻ để kiểm tra",
-                style: TextStyle(fontSize: 18),
-              ),
+              Text("Không có thẻ để kiểm tra", style: TextStyle(fontSize: 18)),
             ],
           ),
         ),
@@ -242,10 +251,7 @@ class _TestPageState extends State<TestPage> {
                   children: [
                     Text(
                       "Câu ${_currentIndex + 1}/${_testCards.length}",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -256,7 +262,8 @@ class _TestPageState extends State<TestPage> {
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    if (currentCard.note != null && currentCard.note!.isNotEmpty) ...[
+                    if (currentCard.note != null &&
+                        currentCard.note!.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Text(
                         currentCard.note!,
@@ -284,14 +291,14 @@ class _TestPageState extends State<TestPage> {
                 enabled: !_showResult,
                 suffixIcon: _userAnswer != null && _userAnswer!.isNotEmpty
                     ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    setState(() {
-                      _userAnswer = null;
-                      _textController.clear();
-                    });
-                  },
-                )
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _userAnswer = null;
+                            _textController.clear();
+                          });
+                        },
+                      )
                     : null,
               ),
               onChanged: (value) {
@@ -417,25 +424,27 @@ class _TestPageState extends State<TestPage> {
         Expanded(
           child: _showResult
               ? ElevatedButton(
-            onPressed: _nextQuestion,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(isLastQuestion ? "Xem kết quả" : "Tiếp theo"),
-          )
+                  onPressed: _nextQuestion,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(isLastQuestion ? "Xem kết quả" : "Tiếp theo"),
+                )
               : ElevatedButton(
-            onPressed: _userAnswer != null && _userAnswer!.trim().isNotEmpty
-                ? () => _checkAnswer(_userAnswer!)
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _userAnswer != null && _userAnswer!.trim().isNotEmpty
-                  ? Colors.green
-                  : Colors.grey,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("Kiểm tra"),
-          ),
+                  onPressed:
+                      _userAnswer != null && _userAnswer!.trim().isNotEmpty
+                      ? () => _checkAnswer(_userAnswer!)
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        _userAnswer != null && _userAnswer!.trim().isNotEmpty
+                        ? Colors.green
+                        : Colors.grey,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text("Kiểm tra"),
+                ),
         ),
       ],
     );

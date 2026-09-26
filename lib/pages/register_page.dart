@@ -12,7 +12,7 @@ class RegisterPage extends StatefulWidget {
   });
 
   @override
-  _RegisterPageState createState() => _RegisterPageState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
 class _RegisterPageState extends State<RegisterPage> {
@@ -21,7 +21,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _authService = AuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -32,15 +31,15 @@ class _RegisterPageState extends State<RegisterPage> {
         _isLoading = true;
       });
 
-      final success = await _authService.register(
+      final authService = AuthService();
+      final success = await authService.register(
         _usernameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      setState(() {
-        _isLoading = false;
-      });
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
       if (success) {
         widget.onRegisterSuccess();
@@ -51,11 +50,20 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         );
       } else {
+        final message = switch (authService.lastErrorCode) {
+          'email-already-in-use' => 'Email đã được sử dụng',
+          'weak-password' => 'Mật khẩu chưa đủ mạnh',
+          'invalid-email' => 'Email không hợp lệ',
+          'configuration-not-found' || 'operation-not-allowed' =>
+            'Firebase Authentication chưa bật đăng nhập Email/Password',
+          'profile-permission-denied' =>
+            'Không thể tạo hồ sơ người dùng do Firestore từ chối quyền truy cập',
+          'profile-write-failed' =>
+            'Đã tạo tài khoản nhưng không thể lưu hồ sơ người dùng',
+          _ => 'Không thể đăng ký. Vui lòng thử lại',
+        };
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email đã được sử dụng'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
         );
       }
     }
@@ -64,9 +72,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Đăng ký tài khoản'),
-      ),
+      appBar: AppBar(title: const Text('Đăng ký tài khoản')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -139,7 +145,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                      _obscurePassword
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                     ),
                     onPressed: () {
                       setState(() {
@@ -170,7 +178,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                      _obscureConfirmPassword
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                     ),
                     onPressed: () {
                       setState(() {
@@ -195,20 +205,20 @@ class _RegisterPageState extends State<RegisterPage> {
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                onPressed: _register,
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: Theme.of(context).primaryColor,
-                ),
-                child: const Text(
-                  'ĐĂNG KÝ',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+                      onPressed: _register,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        backgroundColor: Theme.of(context).primaryColor,
+                      ),
+                      child: const Text(
+                        'ĐĂNG KÝ',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
 
               const SizedBox(height: 20),
 

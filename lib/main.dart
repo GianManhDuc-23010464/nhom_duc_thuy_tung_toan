@@ -1,6 +1,8 @@
 // main.dart - FLASHCARD APP WITH AUTH FLOW
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'pages/home_page.dart';
 import 'pages/stats_page.dart';
 import 'pages/profile_page.dart';
@@ -10,16 +12,14 @@ import 'services/flashcard_service.dart';
 import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const FlashcardApp());
 }
 
 // Trạng thái xác thực
-enum AuthStatus {
-  loading,
-  unauthenticated,
-  authenticated,
-}
+enum AuthStatus { loading, unauthenticated, authenticated }
 
 class FlashcardApp extends StatefulWidget {
   const FlashcardApp({super.key});
@@ -52,19 +52,15 @@ class _FlashcardAppState extends State<FlashcardApp> {
       final authService = AuthService();
       final flashcardService = FlashcardService();
 
-      // Kiểm tra theme và đăng nhập song song
-      final results = await Future.wait([
-        flashcardService.isDarkMode(),
-        authService.isLoggedIn(),
-      ]);
-
-      final isDark = results[0] as bool;
-      final isLoggedIn = results[1] as bool;
+      final isLoggedIn = await authService.isLoggedIn();
+      final isDark = isLoggedIn ? await flashcardService.isDarkMode() : false;
 
       if (mounted) {
         setState(() {
           _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
-          _authStatus = isLoggedIn ? AuthStatus.authenticated : AuthStatus.unauthenticated;
+          _authStatus = isLoggedIn
+              ? AuthStatus.authenticated
+              : AuthStatus.unauthenticated;
           _showLogin = false; // Mặc định hiển thị trang đăng ký đầu tiên
         });
       }
@@ -88,15 +84,21 @@ class _FlashcardAppState extends State<FlashcardApp> {
   }
 
   // Đăng nhập thành công
-  void _onLoginSuccess() {
+  Future<void> _onLoginSuccess() async {
+    final flashcardService = FlashcardService();
+    await flashcardService.switchUserData();
+    final isDark = await flashcardService.isDarkMode();
+    if (!mounted) return;
     setState(() {
       _authStatus = AuthStatus.authenticated;
       _currentIndex = 0; // Về trang chủ
+      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
     });
   }
 
   // Đăng xuất
   void _onLogout() {
+    FlashcardService().clearUserData();
     setState(() {
       _authStatus = AuthStatus.unauthenticated;
       _showLogin = false; // Hiển thị trang đăng ký sau khi logout
@@ -109,15 +111,6 @@ class _FlashcardAppState extends State<FlashcardApp> {
     setState(() {
       _showLogin = true;
     });
-
-    // Hiển thị thông báo thành công
-    ScaffoldMessenger.of(GlobalKey<NavigatorState>().currentContext!).showSnackBar(
-      const SnackBar(
-        content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 3),
-      ),
-    );
   }
 
   // Chuyển đến trang đăng nhập
@@ -162,13 +155,13 @@ class _FlashcardAppState extends State<FlashcardApp> {
       case AuthStatus.unauthenticated:
         return _showLogin
             ? LoginPage(
-          onLoginSuccess: _onLoginSuccess,
-          onNavigateToRegister: _navigateToRegister,
-        )
+                onLoginSuccess: _onLoginSuccess,
+                onNavigateToRegister: _navigateToRegister,
+              )
             : RegisterPage(
-          onRegisterSuccess: _onRegisterSuccess,
-          onNavigateToLogin: _navigateToLogin,
-        );
+                onRegisterSuccess: _onRegisterSuccess,
+                onNavigateToLogin: _navigateToLogin,
+              );
 
       case AuthStatus.authenticated:
         return _buildMainApp();
@@ -201,14 +194,18 @@ class _FlashcardAppState extends State<FlashcardApp> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: _themeMode == ThemeMode.dark ? Colors.white : Colors.black,
+                color: _themeMode == ThemeMode.dark
+                    ? Colors.white
+                    : Colors.black,
               ),
             ),
             const SizedBox(height: 10),
             Text(
               'Đang tải...',
               style: TextStyle(
-                color: _themeMode == ThemeMode.dark ? Colors.grey.shade400 : Colors.grey.shade600,
+                color: _themeMode == ThemeMode.dark
+                    ? Colors.grey.shade400
+                    : Colors.grey.shade600,
                 fontSize: 16,
               ),
             ),
@@ -221,10 +218,7 @@ class _FlashcardAppState extends State<FlashcardApp> {
   // App chính sau khi đăng nhập
   Widget _buildMainApp() {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
@@ -238,18 +232,12 @@ class _FlashcardAppState extends State<FlashcardApp> {
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Trang chủ',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chủ'),
           BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart),
             label: 'Thống kê',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Cá nhân',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Cá nhân'),
         ],
       ),
     );

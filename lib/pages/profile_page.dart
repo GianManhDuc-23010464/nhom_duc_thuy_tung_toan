@@ -159,9 +159,9 @@ class _ProfilePageState extends State<ProfilePage> {
               radius: 50,
               backgroundColor: isLoggedIn ? Colors.purple : Colors.grey,
               child: Icon(
-                  isLoggedIn ? Icons.person : Icons.person_outline,
-                  size: 60,
-                  color: Colors.white
+                isLoggedIn ? Icons.person : Icons.person_outline,
+                size: 60,
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 12),
@@ -183,10 +183,7 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ] else ...[
               const SizedBox(height: 4),
-              Text(
-                "Chưa đăng nhập",
-                style: TextStyle(color: Colors.grey[600]),
-              ),
+              Text("Chưa đăng nhập", style: TextStyle(color: Colors.grey[600])),
             ],
             const SizedBox(height: 16),
 
@@ -196,7 +193,11 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 _buildMiniStat("Bộ thẻ", "$totalSets", Icons.folder),
                 _buildMiniStat("Thẻ", "$totalCards", Icons.credit_card),
-                _buildMiniStat("Streak", "$streak", Icons.local_fire_department),
+                _buildMiniStat(
+                  "Streak",
+                  "$streak",
+                  Icons.local_fire_department,
+                ),
               ],
             ),
           ],
@@ -211,7 +212,7 @@ class _ProfilePageState extends State<ProfilePage> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.1),
+            color: Colors.blue.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 20, color: Colors.blue),
@@ -221,10 +222,7 @@ class _ProfilePageState extends State<ProfilePage> {
           value,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
-        Text(
-          title,
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
+        Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
     );
   }
@@ -285,7 +283,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildProgressCard(double progress) {
     final todayStudied = stats['todayStudied'] ?? 0;
-    final remaining = dailyGoal - todayStudied > 0 ? dailyGoal - todayStudied : 0;
+    final remaining = dailyGoal - todayStudied > 0
+        ? dailyGoal - todayStudied
+        : 0;
 
     return Card(
       child: Padding(
@@ -365,13 +365,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildSettingItem(
-      IconData icon,
-      String title,
-      String subtitle,
-      Widget? trailing, {
-        VoidCallback? onTap,
-        Color? color,
-      }) {
+    IconData icon,
+    String title,
+    String subtitle,
+    Widget? trailing, {
+    VoidCallback? onTap,
+    Color? color,
+  }) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
@@ -401,7 +401,6 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     themeProvider.toggleTheme(value);
-    service.setDarkMode(value);
 
     // Thông báo thay đổi
     ScaffoldMessenger.of(context).showSnackBar(
@@ -413,12 +412,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showGoalDialog() {
-    final TextEditingController controller = TextEditingController(text: dailyGoal.toString());
-    final BuildContext currentContext = context;
+    final TextEditingController controller = TextEditingController(
+      text: dailyGoal.toString(),
+    );
 
     showDialog(
-      context: currentContext,
-      builder: (_) => AlertDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Mục tiêu hàng ngày"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -438,7 +438,7 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(currentContext),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text("Hủy"),
           ),
           ElevatedButton(
@@ -446,16 +446,16 @@ class _ProfilePageState extends State<ProfilePage> {
               final int? goal = int.tryParse(controller.text);
               if (goal != null && goal > 0) {
                 await service.setDailyGoal(goal);
-                if (mounted) {
-                  await _loadProfile(); // Load lại để cập nhật real-time
-                  Navigator.pop(currentContext);
-
-                  ScaffoldMessenger.of(currentContext).showSnackBar(
-                    SnackBar(content: Text("Đã đặt mục tiêu: $goal thẻ/ngày")),
-                  );
-                }
+                if (!dialogContext.mounted) return;
+                await _loadProfile(); // Load lại để cập nhật real-time
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Đã đặt mục tiêu: $goal thẻ/ngày")),
+                );
               } else {
-                ScaffoldMessenger.of(currentContext).showSnackBar(
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
                   const SnackBar(content: Text("Vui lòng nhập số hợp lệ")),
                 );
               }
@@ -469,16 +469,16 @@ class _ProfilePageState extends State<ProfilePage> {
 
   // Hàm đăng xuất
   void _showLogoutDialog() {
-    final BuildContext currentContext = context;
-
     showDialog(
-      context: currentContext,
-      builder: (_) => AlertDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
         title: const Text("Đăng xuất"),
-        content: const Text("Bạn có chắc muốn đăng xuất? Dữ liệu sẽ được lưu cục bộ."),
+        content: const Text(
+          "Bạn có chắc muốn đăng xuất? Dữ liệu đã được đồng bộ với Firebase.",
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(currentContext),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text("Hủy"),
           ),
           ElevatedButton(
@@ -487,20 +487,18 @@ class _ProfilePageState extends State<ProfilePage> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              Navigator.pop(currentContext);
-              await authService.logout();
-              await service.switchUserData();
-
-              // Sử dụng ThemeProvider để logout
-              final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-              themeProvider.logout();
-
-              // Load lại profile để cập nhật UI
-              await _loadProfile();
-
-              ScaffoldMessenger.of(currentContext).showSnackBar(
-                const SnackBar(content: Text("Đã đăng xuất!")),
+              final themeProvider = Provider.of<ThemeProvider>(
+                context,
+                listen: false,
               );
+              Navigator.pop(dialogContext);
+              await authService.logout();
+              if (!mounted) return;
+              service.clearUserData();
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Đã đăng xuất!")));
+              themeProvider.logout();
             },
             child: const Text("Đăng xuất"),
           ),

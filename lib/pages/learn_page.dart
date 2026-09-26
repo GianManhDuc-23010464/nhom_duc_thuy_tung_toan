@@ -7,7 +7,13 @@ import '../services/flashcard_service.dart';
 class LearnPage extends StatefulWidget {
   final List<Flashcard> cards;
   final String? setName;
-  const LearnPage({super.key, required this.cards, this.setName});
+  final String setId;
+  const LearnPage({
+    super.key,
+    required this.cards,
+    required this.setId,
+    this.setName,
+  });
 
   @override
   State<LearnPage> createState() => _LearnPageState();
@@ -17,7 +23,8 @@ class _LearnPageState extends State<LearnPage> {
   int currentIndex = 0;
   final FlashcardService _service = FlashcardService();
   bool _hasRecordedStudy = false;
-  Set<int> _newlyMastered = {}; // Theo dõi thẻ mới thành thạo trong phiên học
+  final Set<int> _newlyMastered =
+      {}; // Theo dõi thẻ mới thành thạo trong phiên học
 
   @override
   void initState() {
@@ -28,7 +35,9 @@ class _LearnPageState extends State<LearnPage> {
       if (!_hasRecordedStudy && widget.cards.isNotEmpty) {
         _service.recordStudySession(widget.cards.length);
         _hasRecordedStudy = true;
-        debugPrint('📚 Đã ghi nhận học ${widget.cards.length} thẻ từ bộ ${widget.setName}');
+        debugPrint(
+          '📚 Đã ghi nhận học ${widget.cards.length} thẻ từ bộ ${widget.setName}',
+        );
       }
     });
   }
@@ -39,19 +48,11 @@ class _LearnPageState extends State<LearnPage> {
 
     final card = widget.cards[index];
     if (!card.mastered) {
-      setState(() {
-        card.mastered = true;
-        _newlyMastered.add(index);
-      });
-
-      // Cập nhật lên database/service
       try {
-        // Tìm setId từ card (giả sử có cách lấy setId)
-        // Trong thực tế, bạn cần có setId để cập nhật
-        // Tạm thời để đây, bạn có thể điều chỉnh sau
-        debugPrint('⭐ Đã đánh dấu thẻ thành thạo: ${card.term}');
+        await _service.markCardAsMastered(widget.setId, card.id);
+        if (!mounted) return;
+        setState(() => _newlyMastered.add(index));
 
-        // Thông báo cập nhật UI
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Đã đánh dấu "${card.term}" thành thạo! ★'),
@@ -71,13 +72,10 @@ class _LearnPageState extends State<LearnPage> {
 
     final card = widget.cards[index];
     if (card.mastered) {
-      setState(() {
-        card.mastered = false;
-        _newlyMastered.remove(index);
-      });
-
       try {
-        debugPrint('🔁 Đã bỏ đánh dấu thành thạo: ${card.term}');
+        await _service.unmarkCardAsMastered(widget.setId, card.id);
+        if (!mounted) return;
+        setState(() => _newlyMastered.remove(index));
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -139,9 +137,9 @@ class _LearnPageState extends State<LearnPage> {
                 currentIndex = 0;
                 _newlyMastered.clear();
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Đã xáo trộn thẻ")),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text("Đã xáo trộn thẻ")));
             },
           ),
         ],
@@ -172,13 +170,17 @@ class _LearnPageState extends State<LearnPage> {
                     child: FlipCard(
                       frontText: card.term,
                       backText: card.meaning,
+                      imageUrl: card.imageUrl,
                       isMastered: card.mastered,
                     ),
                   ),
 
                   // NÚT THÀNH THẠO
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -227,12 +229,15 @@ class _LearnPageState extends State<LearnPage> {
 
           // ĐIỀU HƯỚNG - CỐ ĐỊNH Ở DƯỚI
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // GIẢM PADDING NGANG
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ), // GIẢM PADDING NGANG
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, -2),
                 ),
@@ -243,15 +248,22 @@ class _LearnPageState extends State<LearnPage> {
               children: [
                 // Nút quay lại - GIẢM KÍCH THƯỚC
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_ios, size: 32), // GIẢM TỪ 32 XUỐNG 28
-                  onPressed: currentIndex > 0 ? () => setState(() => currentIndex--) : null,
+                  icon: const Icon(
+                    Icons.arrow_back_ios,
+                    size: 32,
+                  ), // GIẢM TỪ 32 XUỐNG 28
+                  onPressed: currentIndex > 0
+                      ? () => setState(() => currentIndex--)
+                      : null,
                   color: currentIndex > 0 ? Colors.blue : Colors.grey,
                   padding: const EdgeInsets.all(8), // GIẢM PADDING
                 ),
 
                 // Thông tin số thẻ - ĐƯA LẠI GẦN HƠN
                 Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8), // GIẢM MARGIN
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                  ), // GIẢM MARGIN
                   child: Column(
                     children: [
                       Text(
@@ -282,16 +294,20 @@ class _LearnPageState extends State<LearnPage> {
                   onPressed: currentIndex < widget.cards.length - 1
                       ? () => setState(() => currentIndex++)
                       : () {
-                    // Khi hoàn thành
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('🎉 Hoàn thành! Đã học ${widget.cards.length} thẻ'),
-                        duration: const Duration(seconds: 3),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  },
-                  color: currentIndex < widget.cards.length - 1 ? Colors.blue : Colors.green,
+                          // Khi hoàn thành
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '🎉 Hoàn thành! Đã học ${widget.cards.length} thẻ',
+                              ),
+                              duration: const Duration(seconds: 3),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                  color: currentIndex < widget.cards.length - 1
+                      ? Colors.blue
+                      : Colors.green,
                   padding: const EdgeInsets.all(8), // GIẢM PADDING
                 ),
               ],
@@ -303,17 +319,17 @@ class _LearnPageState extends State<LearnPage> {
       // NÚT FLOATING ACTION - Đánh dấu nhanh
       floatingActionButton: card.mastered
           ? FloatingActionButton(
-        onPressed: () => _unmarkAsMastered(currentIndex),
-        backgroundColor: Colors.orange,
-        child: const Icon(Icons.star, color: Colors.white),
-        tooltip: "Bỏ đánh dấu thành thạo",
-      )
+              onPressed: () => _unmarkAsMastered(currentIndex),
+              backgroundColor: Colors.orange,
+              tooltip: "Bỏ đánh dấu thành thạo",
+              child: const Icon(Icons.star, color: Colors.white),
+            )
           : FloatingActionButton(
-        onPressed: () => _markAsMastered(currentIndex),
-        backgroundColor: Colors.amber,
-        child: const Icon(Icons.star_border, color: Colors.white),
-        tooltip: "Đánh dấu thành thạo",
-      ),
+              onPressed: () => _markAsMastered(currentIndex),
+              backgroundColor: Colors.amber,
+              tooltip: "Đánh dấu thành thạo",
+              child: const Icon(Icons.star_border, color: Colors.white),
+            ),
     );
   }
 
@@ -326,7 +342,7 @@ class _LearnPageState extends State<LearnPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -337,35 +353,40 @@ class _LearnPageState extends State<LearnPage> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildStatItem(
-              "Tổng thẻ",
-              "${widget.cards.length}",
-              Icons.credit_card,
-              Colors.blue
+            "Tổng thẻ",
+            "${widget.cards.length}",
+            Icons.credit_card,
+            Colors.blue,
           ),
           _buildStatItem(
-              "Đã thành thạo",
-              "$_masteredCount",
-              Icons.star,
-              Colors.amber
+            "Đã thành thạo",
+            "$_masteredCount",
+            Icons.star,
+            Colors.amber,
           ),
           _buildStatItem(
-              "Mới thành thạo",
-              "$_newMasteredCount",
-              Icons.new_releases,
-              Colors.green
+            "Mới thành thạo",
+            "$_newMasteredCount",
+            Icons.new_releases,
+            Colors.green,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
+  Widget _buildStatItem(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, size: 20, color: color),
@@ -379,13 +400,7 @@ class _LearnPageState extends State<LearnPage> {
             color: color,
           ),
         ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: Colors.grey,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
       ],
     );
   }

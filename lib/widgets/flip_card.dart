@@ -1,19 +1,18 @@
 // widgets/flip_card.dart - ĐÃ THÊM THAM SỐ isMastered
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'dart:math';
 
 class FlipCard extends StatefulWidget {
   final String frontText;
   final String backText;
-  final String? imagePath;
+  final String? imageUrl;
   final bool isMastered; // THÊM THAM SỐ MỚI
 
   const FlipCard({
     super.key,
     required this.frontText,
     required this.backText,
-    this.imagePath,
+    this.imageUrl,
     this.isMastered = false, // GIÁ TRỊ MẶC ĐỊNH
   });
 
@@ -21,7 +20,8 @@ class FlipCard extends StatefulWidget {
   State<FlipCard> createState() => _FlipCardState();
 }
 
-class _FlipCardState extends State<FlipCard> with SingleTickerProviderStateMixin {
+class _FlipCardState extends State<FlipCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   bool isFront = true;
 
@@ -45,7 +45,7 @@ class _FlipCardState extends State<FlipCard> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = widget.imagePath != null && File(widget.imagePath!).existsSync();
+    final hasImage = widget.imageUrl != null && widget.imageUrl!.isNotEmpty;
 
     return GestureDetector(
       onTap: _toggle,
@@ -68,7 +68,11 @@ class _FlipCardState extends State<FlipCard> with SingleTickerProviderStateMixin
                 color: isUnder ? Colors.green[600] : Colors.blueAccent,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 12, offset: Offset(0, 6)),
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 12,
+                    offset: Offset(0, 6),
+                  ),
                 ],
               ),
               child: Stack(
@@ -129,12 +133,13 @@ class _FlipCardState extends State<FlipCard> with SingleTickerProviderStateMixin
       // Mặt trước có ảnh
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.file(
-          File(widget.imagePath!),
+        child: Image.network(
+          widget.imageUrl!,
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
-          errorBuilder: (context, error, stackTrace) => _buildTextContent(isUnder),
+          errorBuilder: (context, error, stackTrace) =>
+              _buildTextContent(isUnder),
         ),
       );
     } else {

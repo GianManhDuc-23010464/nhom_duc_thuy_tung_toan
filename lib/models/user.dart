@@ -1,37 +1,44 @@
-import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class User {
-  final String id; // NEW
+  final String id;
   final String username;
   final String email;
-  final String passwordHash;
   final DateTime createdAt;
+  final int dailyGoal;
+  final bool darkMode;
 
-  User({
-    String? id, // NEW
+  const User({
+    required this.id,
     required this.username,
     required this.email,
-    required this.passwordHash,
     required this.createdAt,
-  }) : id = id ?? const Uuid().v4(); // NEW: Tạo ID nếu chưa có
+    this.dailyGoal = 20,
+    this.darkMode = false,
+  });
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toFirestore() {
     return {
-      'id': id, // NEW
+      'uid': id,
       'username': username,
       'email': email,
-      'passwordHash': passwordHash,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'dailyGoal': dailyGoal,
+      'darkMode': darkMode,
     };
   }
 
-  factory User.fromJson(Map<String, dynamic> json) {
+  factory User.fromFirestore(String uid, Map<String, dynamic> data) {
+    final createdAt = data['createdAt'];
     return User(
-      id: json['id'], // NEW
-      username: json['username'],
-      email: json['email'],
-      passwordHash: json['passwordHash'],
-      createdAt: DateTime.parse(json['createdAt']),
+      id: uid,
+      username: data['username'] as String? ?? 'Người dùng',
+      email: data['email'] as String? ?? '',
+      createdAt: createdAt is Timestamp
+          ? createdAt.toDate()
+          : DateTime.tryParse(createdAt?.toString() ?? '') ?? DateTime.now(),
+      dailyGoal: (data['dailyGoal'] as num?)?.toInt() ?? 20,
+      darkMode: data['darkMode'] as bool? ?? false,
     );
   }
 }
