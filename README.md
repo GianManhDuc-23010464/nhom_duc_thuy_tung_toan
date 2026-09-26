@@ -48,3 +48,24 @@ lib/
 Ứng dụng hoạt động cục bộ: dữ liệu thẻ được lưu dưới dạng JSON trong `SharedPreferences`, còn ảnh được lưu trong thư mục của ứng dụng. Dữ liệu **chưa đồng bộ giữa các thiết bị** và dự án **chưa tích hợp Firebase**.
 
 Xác thực hiện dùng tài khoản lưu trên thiết bị và băm mật khẩu SHA-256 đơn giản, phù hợp để trình diễn, chưa phù hợp cho ứng dụng triển khai thực tế. Bài kiểm tra hiện ghi nhận kết quả tổng, chưa cập nhật độ thành thạo theo từng thẻ. File `test/widget_test.dart` vẫn là bài kiểm tra mẫu của Flutter, chưa phản ánh giao diện ứng dụng hiện tại.
+## Màn hình Thống kê
+
+### Chức năng
+Màn hình Thống kê giúp người dùng theo dõi quá trình học tập trên ứng dụng Flashcard.
+
+Các thông tin hiển thị:
+- Tổng số bộ Flashcard.
+- Tổng số thẻ Flashcard.
+- Số thẻ đã học.
+- Tiến độ học tập.
+- Tỷ lệ ghi nhớ.
+- Chuỗi ngày học liên tục.
+
+### File thực hiện
+`lib/pages/stats_page.dart`
+
+### Điều hướng
+Người dùng chọn **Thống kê** trên Bottom Navigation Bar để truy cập màn hình.
+
+### Người thực hiện
+Nguyễn Đình Tùng
