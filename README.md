@@ -6,14 +6,14 @@
 
 - [Ảnh giao diện](#ảnh-giao-diện)
 - [Chức năng chính](#chức-năng-chính)
-- [Màn hình và điều hướng](#màn-hình-và-điều-hướng)
-- [Luồng hoạt động](#luồng-hoạt-động)
+- [1. Wireframe và Flow of Work](#1-wireframe-các-màn-hình-và-flow-of-work)
+- [2. Số lượng màn hình và Bottom Navigation Bar](#2-số-lượng-màn-hình-và-bottom-navigation-bar)
+- [3. Phân công công việc](#3-phân-công-công-việc)
+- [4. Commit code vào repository chung](#4-commit-code-vào-repository-chung)
 - [Công nghệ](#công-nghệ)
 - [Cấu trúc dự án](#cấu-trúc-dự-án)
 - [Cài đặt và chạy dự án](#cài-đặt-và-chạy-dự-án)
 - [Kiểm thử](#kiểm-thử)
-- [Phân công](#phân-công)
-- [Mã nguồn trọng tâm](#mã-nguồn-trọng-tâm)
 - [Lịch sử commit](#lịch-sử-commit)
 
 ## Ảnh giao diện
@@ -44,67 +44,288 @@ Ba màn hình chính được truy cập bằng `BottomNavigationBar`:
 - Theo dõi tổng số bộ, số thẻ, mục tiêu ngày, tiến độ và chuỗi ngày học.
 - Chuyển đổi giao diện sáng/tối và lưu cài đặt theo tài khoản.
 
-## Màn hình và điều hướng
+## 1. Wireframe các màn hình và Flow of Work
 
-Ứng dụng gồm 10 màn hình nghiệp vụ:
+Ứng dụng có 5 màn hình chức năng chính: `HomePage`, `StatsPage`, `ProfilePage`, `LearnPage` và `TestPage`. Các màn hình hỗ trợ gồm `LoginPage`, `RegisterPage`, `SetDetailPage`, `AddSetPage` và `AddEditFlashcardPage`.
 
-| STT | Màn hình | File chính | Cách truy cập |
-|---:|---|---|---|
-| 1 | Đăng ký | `lib/pages/register_page.dart` | Khởi động khi chưa đăng nhập |
-| 2 | Đăng nhập | `lib/pages/login_page.dart` | Từ màn hình Đăng ký |
-| 3 | Trang chủ | `lib/pages/home_page.dart` | Bottom Navigation item 1 |
-| 4 | Thống kê | `lib/pages/stats_page.dart` | Bottom Navigation item 2 |
-| 5 | Cá nhân | `lib/pages/profile_page.dart` | Bottom Navigation item 3 |
-| 6 | Tạo bộ thẻ | `lib/pages/add_set_page.dart` | Nút `+` tại Trang chủ |
-| 7 | Chi tiết bộ thẻ | `lib/pages/set_detail_page.dart` | Chọn một bộ thẻ |
-| 8 | Thêm/Sửa flashcard | `lib/pages/add_edit_flashcard_page.dart` | Nút `+` hoặc chọn một thẻ |
-| 9 | Học flashcard | `lib/pages/learn_page.dart` | Nút **Học ngay** |
-| 10 | Kiểm tra | `lib/pages/test_page.dart` | Nút **Kiểm tra** |
-
-### Bottom Navigation Bar
-
-Nhóm quyết định sử dụng 3 item chính:
-
-| Item | Icon | Trang | Mục đích |
-|---|---|---|---|
-| Trang chủ | `Icons.home` | `HomePage` | Quản lý và tìm kiếm bộ thẻ |
-| Thống kê | `Icons.bar_chart` | `StatsPage` | Theo dõi tiến độ học tập |
-| Cá nhân | `Icons.person` | `ProfilePage` | Hồ sơ, mục tiêu, theme và đăng xuất |
-
-Ba trang được đặt trong `IndexedStack` để giữ trạng thái khi người dùng chuyển tab.
-
-## Luồng hoạt động
-
-```mermaid
-flowchart TD
-    A[Khởi động ứng dụng] --> B{Đã đăng nhập?}
-    B -- Chưa --> C[Đăng ký / Đăng nhập]
-    C -->|Thành công| D[Trang chủ]
-    B -- Rồi --> D
-    D --> E[Tạo hoặc chọn bộ thẻ]
-    E --> F[Chi tiết bộ thẻ]
-    F --> G[Thêm / Sửa / Xóa flashcard]
-    F --> H[Học flashcard]
-    F --> I[Kiểm tra]
-    H --> J[Thống kê]
-    I --> J
-    D <-->|Bottom Navigation| J
-    J <-->|Bottom Navigation| K[Cá nhân]
-    K -->|Đăng xuất| C
-```
-
-### Wireframe tóm tắt
+### HomePage
 
 ```text
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│ BỘ FLASHCARD     │  │ THỐNG KÊ         │  │ CÁ NHÂN          │
-│ [Tìm kiếm......] │  │ Tổng bộ / thẻ    │  │ Avatar + hồ sơ   │
-│ Tổng bộ / thẻ    │  │ Hôm nay / streak │  │ Bộ / thẻ / streak│
-│ Danh sách bộ     │  │ Biểu đồ tiến độ  │  │ Mục tiêu ngày    │
-│              [+] │  │                  │  │ Theme / đăng xuất│
-├──────────────────┤  ├──────────────────┤  ├──────────────────┤
-│ Home Stats User  │  │ Home Stats User  │  │ Home Stats User  │
-└──────────────────┘  └──────────────────┘  └──────────────────┘
+┌────────────────────────────────┐
+│         FLASHCARD PRO          │
+│                                │
+│  Xin chào, User                │
+│  [ Tìm kiếm Flashcard....... ] │
+│                                │
+│  Bộ Flashcard của bạn          │
+│  ┌──────────────────────────┐  │
+│  │ English Vocabulary       │  │
+│  │ 20 Flashcards            │  │
+│  └──────────────────────────┘  │
+│                         [+]    │
+├────────────────────────────────┤
+│ Trang chủ │ Thống kê │ Cá nhân│
+└────────────────────────────────┘
+```
+
+HomePage hiển thị lời chào, ô tìm kiếm, danh sách bộ thẻ, số lượng thẻ và nút tạo bộ mới. Người dùng có thể mở, đổi tên hoặc xóa một bộ flashcard.
+
+### StatsPage
+
+```text
+┌────────────────────────────────┐
+│       THỐNG KÊ HỌC TẬP        │
+│                                │
+│  Tổng bộ: 5    Tổng thẻ: 100  │
+│  Hôm nay: 20   Mục tiêu: 20   │
+│  Streak: 7 ngày                │
+│  Tỷ lệ ghi nhớ: 80%            │
+│                                │
+│  ┌──────────────────────────┐  │
+│  │     BIỂU ĐỒ THỐNG KÊ     │  │
+│  │   ▂ ▅ ▃ ▇ ▆ █ ▅          │  │
+│  └──────────────────────────┘  │
+├────────────────────────────────┤
+│ Trang chủ │ Thống kê │ Cá nhân│
+└────────────────────────────────┘
+```
+
+StatsPage tổng hợp tổng số bộ, tổng số thẻ, số thẻ đã học hôm nay, mục tiêu ngày, streak, tỷ lệ ghi nhớ và biểu đồ tiến độ.
+
+### ProfilePage
+
+```text
+┌────────────────────────────────┐
+│            CÁ NHÂN             │
+│                                │
+│            (Avatar)            │
+│          Nguyễn Văn A          │
+│       user@example.com         │
+│                                │
+│  Mục tiêu mỗi ngày: 20 thẻ [✎]│
+│  Dark Mode                 [◉] │
+│  [ ĐĂNG XUẤT ]                 │
+├────────────────────────────────┤
+│ Trang chủ │ Thống kê │ Cá nhân│
+└────────────────────────────────┘
+```
+
+ProfilePage hiển thị avatar, tên, email, mục tiêu học mỗi ngày, cài đặt Dark Mode và thao tác đăng xuất.
+
+### LearnPage
+
+```text
+┌────────────────────────────────┐
+│         HỌC FLASHCARD          │
+│             3 / 20             │
+│                                │
+│  ┌──────────────────────────┐  │
+│  │          HELLO           │  │
+│  │                          │  │
+│  │      Chạm để lật thẻ     │  │
+│  └──────────────────────────┘  │
+│                                │
+│  [ Đánh dấu thành thạo ★ ]     │
+│  [ Trước ]          [ Sau ]    │
+└────────────────────────────────┘
+```
+
+LearnPage hiển thị vị trí thẻ hiện tại, hỗ trợ lật thẻ, chuyển thẻ trước/sau, trộn thẻ và đánh dấu thẻ đã thành thạo.
+
+### TestPage
+
+```text
+┌────────────────────────────────┐
+│          KIỂM TRA              │
+│          Câu 3 / 20            │
+│                                │
+│  Từ cần kiểm tra: HELLO        │
+│  [ Nhập nghĩa của từ........ ] │
+│  [ KIỂM TRA ]                  │
+│                                │
+│  Đúng: 2          Sai: 0       │
+│  [ Quay lại ]     [ Tiếp theo ]│
+└────────────────────────────────┘
+```
+
+TestPage hiển thị câu hiện tại, từ cần kiểm tra, ô nhập đáp án, kết quả đúng/sai và thống kê số câu đúng, sai.
+
+### Flow of Work
+
+```text
+Đăng ký
+   │
+   ▼
+Đăng nhập ───────────────► HomePage
+                              │
+               ┌──────────────┴──────────────┐
+               ▼                             ▼
+       Tạo bộ Flashcard              Chọn bộ Flashcard
+                                             │
+                                             ▼
+                                      SetDetailPage
+                                      │             │
+                                      ▼             ▼
+                                  LearnPage      TestPage
+                                  │              │
+                                  ├─ Xem thẻ     ├─ Nhập đáp án
+                                  ├─ Lật thẻ     ├─ Kiểm tra đúng/sai
+                                  ├─ Trước/Sau   └─ Xem kết quả
+                                  └─ Mastered
+
+HomePage ◄──── Bottom Navigation ────► StatsPage
+    │                                      │
+    └────── Bottom Navigation ──────► ProfilePage
+                                           ├─ Thông tin cá nhân
+                                           ├─ Mục tiêu học
+                                           ├─ Dark Mode
+                                           └─ Đăng xuất
+```
+
+## 2. Số lượng màn hình và Bottom Navigation Bar
+
+Nhóm quyết định có 5 màn hình chức năng chính:
+
+1. `HomePage`
+2. `StatsPage`
+3. `ProfilePage`
+4. `LearnPage`
+5. `TestPage`
+
+Bottom Navigation Bar chỉ gồm 3 màn hình thường xuyên được truy cập:
+
+- `HomePage`
+- `StatsPage`
+- `ProfilePage`
+
+`LearnPage` và `TestPage` không nằm trực tiếp trong Bottom Navigation Bar. Hai trang được truy cập theo luồng:
+
+```text
+HomePage → SetDetailPage → LearnPage / TestPage
+```
+
+Code thực tế trong `lib/main.dart`:
+
+```dart
+final List<Widget> _pages = [
+  const HomePage(),
+  const StatsPage(),
+  const ProfilePage(),
+];
+
+Widget _buildMainApp() {
+  return Scaffold(
+    body: IndexedStack(index: _currentIndex, children: _pages),
+    bottomNavigationBar: BottomNavigationBar(
+      currentIndex: _currentIndex,
+      onTap: (index) => setState(() => _currentIndex = index),
+      backgroundColor: _themeMode == ThemeMode.dark
+          ? const Color(0xFF1E1E1E)
+          : Colors.white,
+      selectedItemColor: _themeMode == ThemeMode.dark
+          ? const Color(0xFF9C27B0)
+          : const Color(0xFF3F51B5),
+      unselectedItemColor: Colors.grey,
+      selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+      type: BottomNavigationBarType.fixed,
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home),
+          label: 'Trang chủ',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.bar_chart),
+          label: 'Thống kê',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person),
+          label: 'Cá nhân',
+        ),
+      ],
+    ),
+  );
+}
+```
+
+Mã nguồn đầy đủ:
+
+- Bottom Navigation: [`lib/main.dart`](lib/main.dart)
+- Trang chủ: [`lib/pages/home_page.dart`](lib/pages/home_page.dart)
+- Thống kê: [`lib/pages/stats_page.dart`](lib/pages/stats_page.dart)
+- Cá nhân: [`lib/pages/profile_page.dart`](lib/pages/profile_page.dart)
+- Học: [`lib/pages/learn_page.dart`](lib/pages/learn_page.dart)
+- Kiểm tra: [`lib/pages/test_page.dart`](lib/pages/test_page.dart)
+
+## 3. Phân công công việc
+
+| Sinh viên | Màn hình phụ trách | File chính |
+|---|---|---|
+| Đức | HomePage | `lib/pages/home_page.dart` |
+| Tùng (Nguyễn Đình Tùng) | StatsPage | `lib/pages/stats_page.dart` |
+| Thủy | ProfilePage | `lib/pages/profile_page.dart` |
+| Toàn | LearnPage / TestPage | `lib/pages/learn_page.dart`, `lib/pages/test_page.dart` |
+
+### Đức - HomePage
+
+- Hiển thị danh sách bộ Flashcard và số lượng thẻ.
+- Tìm kiếm, tạo, sửa và xóa bộ Flashcard.
+- Mở chi tiết bộ Flashcard.
+- Điều hướng tới luồng học và kiểm tra thông qua `SetDetailPage`.
+
+### Tùng (Nguyễn Đình Tùng) - StatsPage
+
+- Hiển thị tổng số bộ, tổng số thẻ và số thẻ đã học.
+- Hiển thị mục tiêu hàng ngày, streak và tỷ lệ ghi nhớ.
+- Trình bày biểu đồ thống kê học tập.
+
+### Thủy - ProfilePage
+
+- Hiển thị thông tin người dùng, tên và email.
+- Thay đổi mục tiêu học mỗi ngày.
+- Bật/tắt Dark Mode.
+- Đăng xuất khỏi ứng dụng.
+
+### Toàn - LearnPage / TestPage
+
+LearnPage:
+
+- Hiển thị, lật và chuyển flashcard.
+- Trộn thứ tự thẻ.
+- Đánh dấu thẻ mastered.
+
+TestPage:
+
+- Hiển thị câu hỏi và nhận đáp án người dùng.
+- Kiểm tra đúng/sai.
+- Thống kê số câu đúng/sai và hiển thị kết quả.
+
+## 4. Commit code vào repository chung
+
+Repository của nhóm:
+
+<https://github.com/GianManhDuc-23010464/nhom_duc_thuy_tung_toan>
+
+Quy trình commit; chỉ push sau khi nhóm xác nhận:
+
+```bash
+git status
+git add <cac-file-duoc-phan-cong>
+git commit -m "docs: update wireframes flow and team assignment"
+```
+
+Sau khi được xác nhận, push branch hiện tại lên remote. Ví dụ với `main`:
+
+```bash
+git push origin main
+```
+
+Mỗi sinh viên cần có commit riêng cho phần code được phân công để lịch sử Git thể hiện rõ đóng góp:
+
+```text
+Đức:  feat: implement home page
+Tùng:  feat: implement statistics page
+Thủy:  feat: implement profile page
+Toàn:  feat: implement learn and test pages
 ```
 
 ## Công nghệ
@@ -213,55 +434,6 @@ Kết quả gần nhất:
 
 - `flutter analyze`: không phát hiện vấn đề.
 - `flutter test`: 2/2 test vượt qua.
-
-## Phân công
-
-| Thành viên | Phần việc | File trọng tâm |
-|---|---|---|
-| Đức | Khung ứng dụng, Firebase Auth và Bottom Navigation | `main.dart`, `login_page.dart`, `register_page.dart` |
-| Thủy | Trang chủ và quản lý bộ/thẻ | `home_page.dart`, `set_detail_page.dart`, các trang thêm/sửa |
-| Tùng | Thống kê và màn hình học | `stats_page.dart`, `learn_page.dart`, `flip_card.dart` |
-| Toàn | Cá nhân và kiểm tra | `profile_page.dart`, `test_page.dart`, `app_theme.dart` |
-
-> Phân công cần được đối chiếu lại với danh sách chính thức của nhóm trước khi nộp.
-
-## Mã nguồn trọng tâm
-
-### Bottom Navigation Bar
-
-```dart
-Scaffold(
-  body: IndexedStack(index: _currentIndex, children: _pages),
-  bottomNavigationBar: BottomNavigationBar(
-    currentIndex: _currentIndex,
-    onTap: (index) => setState(() => _currentIndex = index),
-    type: BottomNavigationBarType.fixed,
-    items: const [
-      BottomNavigationBarItem(
-        icon: Icon(Icons.home),
-        label: 'Trang chủ',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.bar_chart),
-        label: 'Thống kê',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.person),
-        label: 'Cá nhân',
-      ),
-    ],
-  ),
-);
-```
-
-Mã nguồn đầy đủ:
-
-- Bottom Navigation: [`lib/main.dart`](lib/main.dart)
-- Trang chủ: [`lib/pages/home_page.dart`](lib/pages/home_page.dart)
-- Thống kê: [`lib/pages/stats_page.dart`](lib/pages/stats_page.dart)
-- Cá nhân: [`lib/pages/profile_page.dart`](lib/pages/profile_page.dart)
-- Học: [`lib/pages/learn_page.dart`](lib/pages/learn_page.dart)
-- Kiểm tra: [`lib/pages/test_page.dart`](lib/pages/test_page.dart)
 
 ## Lịch sử commit
 
