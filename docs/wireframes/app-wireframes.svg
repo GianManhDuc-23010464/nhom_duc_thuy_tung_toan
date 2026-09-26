@@ -1,0 +1,194 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1560" viewBox="0 0 1200 1560" role="img" aria-labelledby="title desc">
+  <title id="title">Wireframe năm màn hình chính của Flashcard Pro</title>
+  <desc id="desc">Wireframe HomePage, StatsPage, ProfilePage, LearnPage và TestPage.</desc>
+  <defs>
+    <style>
+      .page { fill: #ffffff; stroke: #20242c; stroke-width: 3; }
+      .bar { fill: #f4f5f8; }
+      .card { fill: #ffffff; stroke: #a7acb7; stroke-width: 2; }
+      .soft { fill: #f0ecf8; stroke: #7557a8; stroke-width: 2; }
+      .accent { fill: #7557a8; }
+      .line { stroke: #343944; stroke-width: 2; fill: none; stroke-linecap: round; }
+      .muted-line { stroke: #a7acb7; stroke-width: 2; fill: none; stroke-linecap: round; }
+      .title { font: 700 24px Arial, sans-serif; fill: #20242c; }
+      .heading { font: 700 18px Arial, sans-serif; fill: #20242c; }
+      .body { font: 15px Arial, sans-serif; fill: #343944; }
+      .small { font: 12px Arial, sans-serif; fill: #6f7480; }
+      .button { font: 700 14px Arial, sans-serif; fill: #ffffff; }
+      .screen-label { font: 700 22px Arial, sans-serif; fill: #7557a8; letter-spacing: .5px; }
+    </style>
+
+    <g id="statusbar">
+      <text x="20" y="27" class="small" font-weight="700">9:41</text>
+      <rect x="275" y="16" width="22" height="10" rx="3" class="line"/>
+      <rect x="298" y="19" width="3" height="4" rx="1" fill="#343944"/>
+      <path d="M245 25h3m4 0h3m4 0h3" class="line"/>
+    </g>
+
+    <g id="bottomnav">
+      <line x1="0" y1="0" x2="330" y2="0" class="muted-line"/>
+      <path d="M44 30l15-12 15 12v20H48V31" class="line"/>
+      <rect x="154" y="20" width="6" height="30" rx="2" fill="#a7acb7"/>
+      <rect x="165" y="30" width="6" height="20" rx="2" fill="#a7acb7"/>
+      <rect x="176" y="12" width="6" height="38" rx="2" fill="#a7acb7"/>
+      <circle cx="271" cy="26" r="10" class="line"/>
+      <path d="M251 51c3-13 37-13 40 0" class="line"/>
+      <text x="35" y="70" class="small">Trang chủ</text>
+      <text x="143" y="70" class="small">Thống kê</text>
+      <text x="250" y="70" class="small">Cá nhân</text>
+    </g>
+  </defs>
+
+  <rect width="1200" height="1560" fill="#fafafa"/>
+  <text x="600" y="42" text-anchor="middle" class="title">WIREFRAME — FLASHCARD PRO</text>
+
+  <!-- HomePage -->
+  <g transform="translate(40 75)">
+    <text x="165" y="0" text-anchor="middle" class="screen-label">HomePage</text>
+    <rect y="20" width="330" height="650" rx="26" class="page"/>
+    <g transform="translate(0 22)"><use href="#statusbar"/></g>
+    <text x="24" y="92" class="small">Xin chào,</text>
+    <text x="24" y="118" class="heading">Người học 👋</text>
+    <circle cx="292" cy="100" r="20" class="soft"/>
+    <circle cx="292" cy="94" r="6" class="line"/>
+    <path d="M280 112c3-10 21-10 24 0" class="line"/>
+    <rect x="20" y="140" width="290" height="46" rx="12" class="bar"/>
+    <circle cx="42" cy="163" r="7" class="line"/>
+    <path d="M47 168l6 6" class="line"/>
+    <text x="64" y="168" class="small">Tìm kiếm bộ flashcard</text>
+    <text x="20" y="220" class="heading">Bộ flashcard của bạn</text>
+    <text x="282" y="220" class="small">5 bộ</text>
+    <rect x="20" y="242" width="290" height="108" rx="14" class="card"/>
+    <rect x="34" y="258" width="54" height="54" rx="10" class="soft"/>
+    <path d="M48 271h26v29H48zM53 266h26v29" class="line"/>
+    <text x="104" y="276" class="heading">English Vocabulary</text>
+    <text x="104" y="303" class="small">20 flashcards</text>
+    <rect x="104" y="320" width="104" height="8" rx="4" fill="#ded7eb"/>
+    <rect x="104" y="320" width="65" height="8" rx="4" class="accent"/>
+    <circle cx="295" cy="265" r="2" fill="#343944"/><circle cx="295" cy="273" r="2" fill="#343944"/><circle cx="295" cy="281" r="2" fill="#343944"/>
+    <rect x="20" y="366" width="290" height="82" rx="14" class="card"/>
+    <rect x="34" y="380" width="54" height="54" rx="10" class="bar"/>
+    <path d="M48 394h26v26H48z" class="muted-line"/>
+    <text x="104" y="400" class="heading">Công nghệ thông tin</text>
+    <text x="104" y="426" class="small">12 flashcards</text>
+    <circle cx="286" cy="516" r="28" class="accent"/>
+    <path d="M276 516h20M286 506v20" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+    <g transform="translate(0 570)"><use href="#bottomnav"/></g>
+    <rect x="28" y="636" width="74" height="3" rx="2" class="accent"/>
+  </g>
+
+  <!-- StatsPage -->
+  <g transform="translate(435 75)">
+    <text x="165" y="0" text-anchor="middle" class="screen-label">StatsPage</text>
+    <rect y="20" width="330" height="650" rx="26" class="page"/>
+    <g transform="translate(0 22)"><use href="#statusbar"/></g>
+    <text x="20" y="92" class="title">Thống kê học tập</text>
+    <text x="20" y="116" class="small">Tổng quan tiến độ của bạn</text>
+    <rect x="20" y="140" width="137" height="92" rx="14" class="soft"/>
+    <text x="36" y="166" class="small">Tổng bộ</text><text x="36" y="205" class="title">5</text>
+    <rect x="173" y="140" width="137" height="92" rx="14" class="card"/>
+    <text x="189" y="166" class="small">Tổng thẻ</text><text x="189" y="205" class="title">100</text>
+    <rect x="20" y="246" width="137" height="92" rx="14" class="card"/>
+    <text x="36" y="272" class="small">Đã học hôm nay</text><text x="36" y="311" class="title">20</text>
+    <rect x="173" y="246" width="137" height="92" rx="14" class="card"/>
+    <text x="189" y="272" class="small">Chuỗi ngày học</text><text x="189" y="311" class="title">7 ngày</text>
+    <rect x="20" y="354" width="290" height="168" rx="14" class="card"/>
+    <text x="36" y="384" class="heading">Tiến độ 7 ngày</text>
+    <line x1="42" y1="490" x2="290" y2="490" class="muted-line"/>
+    <line x1="42" y1="410" x2="42" y2="490" class="muted-line"/>
+    <rect x="60" y="454" width="18" height="36" rx="4" fill="#c9bddc"/>
+    <rect x="94" y="432" width="18" height="58" rx="4" fill="#a992c8"/>
+    <rect x="128" y="444" width="18" height="46" rx="4" fill="#c9bddc"/>
+    <rect x="162" y="416" width="18" height="74" rx="4" class="accent"/>
+    <rect x="196" y="425" width="18" height="65" rx="4" fill="#8d72b5"/>
+    <rect x="230" y="406" width="18" height="84" rx="4" class="accent"/>
+    <rect x="264" y="438" width="18" height="52" rx="4" fill="#a992c8"/>
+    <text x="36" y="550" class="body">Tỷ lệ ghi nhớ</text>
+    <text x="270" y="550" text-anchor="end" class="heading">80%</text>
+    <rect x="20" y="562" width="290" height="9" rx="5" fill="#ded7eb"/>
+    <rect x="20" y="562" width="232" height="9" rx="5" class="accent"/>
+    <g transform="translate(0 570)"><use href="#bottomnav"/></g>
+    <rect x="130" y="636" width="74" height="3" rx="2" class="accent"/>
+  </g>
+
+  <!-- ProfilePage -->
+  <g transform="translate(830 75)">
+    <text x="165" y="0" text-anchor="middle" class="screen-label">ProfilePage</text>
+    <rect y="20" width="330" height="650" rx="26" class="page"/>
+    <g transform="translate(0 22)"><use href="#statusbar"/></g>
+    <text x="20" y="92" class="title">Cá nhân</text>
+    <circle cx="165" cy="156" r="45" class="soft"/>
+    <circle cx="165" cy="145" r="14" class="line"/>
+    <path d="M137 180c4-24 52-24 56 0" class="line"/>
+    <text x="165" y="224" text-anchor="middle" class="heading">Nguyễn Văn A</text>
+    <text x="165" y="248" text-anchor="middle" class="small">user@example.com</text>
+    <text x="20" y="292" class="small">CÀI ĐẶT HỌC TẬP</text>
+    <rect x="20" y="310" width="290" height="64" rx="14" class="card"/>
+    <circle cx="50" cy="342" r="16" class="soft"/>
+    <path d="M45 342h10M50 337v10" class="line"/>
+    <text x="78" y="338" class="body">Mục tiêu mỗi ngày</text>
+    <text x="78" y="358" class="small">20 thẻ</text>
+    <path d="M286 336l8 8-8 8" class="line"/>
+    <rect x="20" y="388" width="290" height="64" rx="14" class="card"/>
+    <circle cx="50" cy="420" r="16" class="soft"/>
+    <path d="M55 408a12 12 0 1 0 7 21 14 14 0 0 1-7-21z" class="line"/>
+    <text x="78" y="425" class="body">Giao diện tối</text>
+    <rect x="254" y="407" width="42" height="24" rx="12" fill="#ded7eb"/>
+    <circle cx="266" cy="419" r="9" fill="#fff" stroke="#a7acb7"/>
+    <rect x="20" y="476" width="290" height="48" rx="12" fill="#fff" stroke="#c94a4a" stroke-width="2"/>
+    <text x="165" y="506" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#c94a4a">ĐĂNG XUẤT</text>
+    <g transform="translate(0 570)"><use href="#bottomnav"/></g>
+    <rect x="238" y="636" width="74" height="3" rx="2" class="accent"/>
+  </g>
+
+  <!-- LearnPage -->
+  <g transform="translate(230 850)">
+    <text x="165" y="0" text-anchor="middle" class="screen-label">LearnPage</text>
+    <rect y="20" width="330" height="650" rx="26" class="page"/>
+    <g transform="translate(0 22)"><use href="#statusbar"/></g>
+    <path d="M30 91l-10 10 10 10M20 101h20" class="line"/>
+    <text x="165" y="107" text-anchor="middle" class="heading">Học flashcard</text>
+    <text x="165" y="143" text-anchor="middle" class="small">3 / 20</text>
+    <rect x="30" y="160" width="270" height="10" rx="5" fill="#ded7eb"/>
+    <rect x="30" y="160" width="41" height="10" rx="5" class="accent"/>
+    <rect x="24" y="204" width="282" height="270" rx="22" class="soft"/>
+    <text x="165" y="306" text-anchor="middle" class="small">MẶT TRƯỚC</text>
+    <text x="165" y="350" text-anchor="middle" class="title">HELLO</text>
+    <path d="M145 395c11 10 29 10 40 0" class="muted-line"/>
+    <text x="165" y="428" text-anchor="middle" class="small">Chạm để lật thẻ</text>
+    <rect x="57" y="500" width="216" height="48" rx="12" class="accent"/>
+    <text x="165" y="530" text-anchor="middle" class="button">☆  ĐÁNH DẤU THÀNH THẠO</text>
+    <rect x="24" y="570" width="96" height="46" rx="12" class="card"/>
+    <text x="72" y="599" text-anchor="middle" class="body">← Trước</text>
+    <rect x="210" y="570" width="96" height="46" rx="12" class="card"/>
+    <text x="258" y="599" text-anchor="middle" class="body">Sau →</text>
+    <text x="165" y="647" text-anchor="middle" class="small">⇄  Trộn thẻ</text>
+  </g>
+
+  <!-- TestPage -->
+  <g transform="translate(640 850)">
+    <text x="165" y="0" text-anchor="middle" class="screen-label">TestPage</text>
+    <rect y="20" width="330" height="650" rx="26" class="page"/>
+    <g transform="translate(0 22)"><use href="#statusbar"/></g>
+    <path d="M30 91l-10 10 10 10M20 101h20" class="line"/>
+    <text x="165" y="107" text-anchor="middle" class="heading">Kiểm tra</text>
+    <text x="20" y="148" class="small">Câu 3 / 20</text>
+    <rect x="20" y="160" width="290" height="9" rx="5" fill="#ded7eb"/>
+    <rect x="20" y="160" width="44" height="9" rx="5" class="accent"/>
+    <rect x="20" y="198" width="290" height="142" rx="18" class="soft"/>
+    <text x="165" y="240" text-anchor="middle" class="small">NGHĨA CỦA TỪ</text>
+    <text x="165" y="292" text-anchor="middle" class="title">HELLO</text>
+    <text x="20" y="378" class="small">Câu trả lời của bạn</text>
+    <rect x="20" y="392" width="290" height="54" rx="12" class="card"/>
+    <text x="38" y="425" class="small">Nhập nghĩa của từ...</text>
+    <rect x="20" y="464" width="290" height="50" rx="12" class="accent"/>
+    <text x="165" y="495" text-anchor="middle" class="button">KIỂM TRA</text>
+    <rect x="20" y="534" width="137" height="68" rx="14" class="card"/>
+    <text x="36" y="558" class="small">Trả lời đúng</text>
+    <text x="36" y="586" class="heading">2</text>
+    <rect x="173" y="534" width="137" height="68" rx="14" class="card"/>
+    <text x="189" y="558" class="small">Trả lời sai</text>
+    <text x="189" y="586" class="heading">0</text>
+    <text x="165" y="638" text-anchor="middle" class="small">Bỏ qua câu này →</text>
+  </g>
+</svg>
