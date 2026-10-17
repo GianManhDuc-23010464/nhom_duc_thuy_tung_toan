@@ -1,28 +1,34 @@
 import 'package:flutter/material.dart';
 import '../services/flashcard_service.dart';
-import '../services/auth_service.dart'; // NEW
+import '../services/auth_service.dart';
 import '../models/flashcard_set.dart';
 import 'set_detail_page.dart';
-import 'add_set_page.dart'; // NEW: Đổi thành AddSetPage mới
+import 'add_set_page.dart';
+import 'generic_screen.dart';
+import 'generic_demo_page.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+/// Trang chủ bộ Flashcard kế thừa GenericStatefulScreen<List<FlashcardSet>>
+/// Kế thừa bố cục chung (AppBar, Actions, Search Bottom, FAB, Loading state, Scaffold)
+class HomePage extends GenericStatefulScreen<List<FlashcardSet>> {
+  const HomePage({super.key})
+      : super(title: "Bộ Flashcard", showBackButton: false);
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState
+    extends GenericScreenState<HomePage, List<FlashcardSet>> {
   final FlashcardService _service = FlashcardService();
-  final AuthService _authService = AuthService(); // NEW
+  final AuthService _authService = AuthService();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  List<FlashcardSet> _sets = []; // NEW: Lưu trữ sets riêng
-  bool _isLoading = true; // NEW: Loading state
+  List<FlashcardSet> _sets = [];
 
   @override
   void initState() {
     super.initState();
-    _loadData(); // NEW: Tải dữ liệu khi init
+    _loadData();
     _searchController.addListener(() {
       setState(() {
         _searchQuery = _searchController.text.toLowerCase();
@@ -30,103 +36,118 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // NEW: Tải dữ liệu từ service
+  // Tải dữ liệu từ service
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setLoading(true);
 
     await _service.loadData();
 
     if (mounted) {
-      setState(() {
-        _sets = _service.sets;
-        _isLoading = false;
-      });
+      _sets = _service.sets;
+      setScreenData(_sets);
+      setLoading(false);
     }
   }
 
   void _refresh() async {
-    await _loadData(); // NEW: Tải lại dữ liệu
+    await _loadData();
   }
 
+  /// Kế thừa và định nghĩa các Actions trên AppBar chung
   @override
-  Widget build(BuildContext context) {
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.school),
+        tooltip: "Demo Generics (Câu 1 & 2)",
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const GenericDemoPage()),
+          );
+        },
+      ),
+      IconButton(
+        icon: const Icon(Icons.refresh),
+        onPressed: _refresh,
+        tooltip: "Làm mới",
+      ),
+      FutureBuilder(
+        future: _authService.getCurrentUser(),
+        builder: (context, snapshot) {
+          final user = snapshot.data;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: CircleAvatar(
+              backgroundColor: user != null ? Colors.blue : Colors.grey,
+              child: user != null
+                  ? Text(user.username[0].toUpperCase())
+                  : const Icon(Icons.person, color: Colors.white),
+            ),
+          );
+        },
+      ),
+    ];
+  }
+
+  /// Kế thừa và định nghĩa phần bottom của AppBar (thanh tìm kiếm)
+  @override
+  PreferredSizeWidget? buildAppBarBottom(BuildContext context) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(60),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: TextField(
+          controller: _searchController,
+          decoration: InputDecoration(
+            hintText: "Tìm bộ flashcard...",
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _searchController.clear();
+                    },
+                  )
+                : null,
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Kế thừa và định nghĩa FloatingActionButton
+  @override
+  Widget? buildFloatingActionButton(BuildContext context) {
+    return FloatingActionButton(
+      onPressed: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AddSetPage()),
+        );
+        _refresh();
+      },
+      tooltip: "Tạo bộ thẻ mới",
+      child: const Icon(Icons.add),
+    );
+  }
+
+  /// Kế thừa và định nghĩa phần nội dung chính (Content)
+  @override
+  Widget buildContent(BuildContext context) {
     // LỌC THEO TÊN BỘ
     final filteredSets = _sets.where((set) {
       return set.title.toLowerCase().contains(_searchQuery);
     }).toList();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Bộ Flashcard"),
-        actions: [
-          // NEW: User avatar và refresh button
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refresh,
-            tooltip: "Làm mới",
-          ),
-          FutureBuilder(
-            future: _authService.getCurrentUser(),
-            builder: (context, snapshot) {
-              final user = snapshot.data;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: CircleAvatar(
-                  backgroundColor: user != null ? Colors.blue : Colors.grey,
-                  child: user != null
-                      ? Text(user.username[0].toUpperCase())
-                      : const Icon(Icons.person, color: Colors.white),
-                ),
-              );
-            },
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: "Tìm bộ flashcard...",
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                  },
-                )
-                    : null,
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
-              ),
-            ),
-          ),
-        ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator()) // NEW: Loading indicator
-          : _buildBody(filteredSets),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const AddSetPage()), // NEW: Dùng AddSetPage mới
-          );
-          _refresh();
-        },
-        child: const Icon(Icons.add),
-        tooltip: "Tạo bộ thẻ mới",
-      ),
-    );
+    return _buildBody(filteredSets);
   }
 
   Widget _buildBody(List<FlashcardSet> filteredSets) {

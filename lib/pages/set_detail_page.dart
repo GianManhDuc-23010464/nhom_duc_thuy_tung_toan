@@ -7,20 +7,24 @@ import 'add_edit_flashcard_page.dart';
 import 'learn_page.dart';
 import 'test_page.dart'; // Import TestPage
 import '../widgets/gradient_learn_button.dart';
+import 'generic_screen.dart';
 
-class SetDetailPage extends StatefulWidget {
+/// Trang chi tiết bộ Flashcard kế thừa GenericStatefulScreen<FlashcardSet>
+/// Kế thừa bố cục chung: AppBar, Actions, Loading indicator, FloatingActionButton, BottomNavigationBar
+class SetDetailPage extends GenericStatefulScreen<FlashcardSet> {
   final FlashcardSet set;
-  const SetDetailPage({super.key, required this.set});
+  SetDetailPage({super.key, required this.set})
+      : super(title: set.title, initialData: set);
 
   @override
   State<SetDetailPage> createState() => _SetDetailPageState();
 }
 
-class _SetDetailPageState extends State<SetDetailPage> {
+class _SetDetailPageState
+    extends GenericScreenState<SetDetailPage, FlashcardSet> {
   late FlashcardSet _currentSet;
   final FlashcardService _service = FlashcardService();
   List<FlashcardSet> _allSets = [];
-  bool _isLoading = true;
 
   @override
   void initState() {
@@ -30,23 +34,20 @@ class _SetDetailPageState extends State<SetDetailPage> {
   }
 
   Future<void> _loadCurrentSet() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setLoading(true);
 
     await _service.loadData();
     _allSets = _service.sets;
 
     final updatedSet = _allSets.firstWhere(
-          (set) => set.id == _currentSet.id,
+      (set) => set.id == _currentSet.id,
       orElse: () => _currentSet,
     );
 
     if (mounted) {
-      setState(() {
-        _currentSet = updatedSet;
-        _isLoading = false;
-      });
+      _currentSet = updatedSet;
+      setScreenData(updatedSet);
+      setLoading(false);
     }
   }
 
@@ -59,64 +60,71 @@ class _SetDetailPageState extends State<SetDetailPage> {
     return _currentSet.cards.where((card) => card.mastered).length;
   }
 
+  /// Kế thừa và định nghĩa AppBar chung
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_currentSet.title),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refresh,
-            tooltip: "Làm mới",
-          ),
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _showEditSetDialog,
-            tooltip: "Sửa tên bộ thẻ",
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'delete') {
-                _showDeleteSetDialog();
-              }
-            },
-            itemBuilder: (BuildContext context) => [
-              const PopupMenuItem<String>(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Xóa bộ thẻ'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      body: _isLoading ? _buildLoading() : _buildBody(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addCard,
-        child: const Icon(Icons.add),
-        tooltip: "Thêm thẻ mới",
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+  PreferredSizeWidget? buildAppBar(BuildContext context) {
+    return AppBar(
+      title: Text(_currentSet.title),
+      actions: buildActions(context),
     );
   }
 
-  Widget _buildLoading() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text('Đang tải dữ liệu...'),
+  /// Kế thừa và định nghĩa các Actions trên AppBar
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.refresh),
+        onPressed: _refresh,
+        tooltip: "Làm mới",
+      ),
+      IconButton(
+        icon: const Icon(Icons.edit),
+        onPressed: _showEditSetDialog,
+        tooltip: "Sửa tên bộ thẻ",
+      ),
+      PopupMenuButton<String>(
+        onSelected: (value) {
+          if (value == 'delete') {
+            _showDeleteSetDialog();
+          }
+        },
+        itemBuilder: (BuildContext context) => [
+          const PopupMenuItem<String>(
+            value: 'delete',
+            child: Row(
+              children: [
+                Icon(Icons.delete, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Xóa bộ thẻ'),
+              ],
+            ),
+          ),
         ],
       ),
+    ];
+  }
+
+  /// Kế thừa và định nghĩa phần nội dung chính (Body content)
+  @override
+  Widget buildContent(BuildContext context) {
+    return _buildBody();
+  }
+
+  /// Kế thừa và định nghĩa Floating Action Button
+  @override
+  Widget? buildFloatingActionButton(BuildContext context) {
+    return FloatingActionButton(
+      onPressed: _addCard,
+      tooltip: "Thêm thẻ mới",
+      child: const Icon(Icons.add),
     );
+  }
+
+  /// Kế thừa và định nghĩa BottomNavigationBar
+  @override
+  Widget? buildBottomNavigationBar(BuildContext context) {
+    return _buildBottomNavigationBar();
   }
 
   Widget _buildBody() {
