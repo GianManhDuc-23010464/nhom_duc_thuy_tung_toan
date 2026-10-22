@@ -1,36 +1,33 @@
 {
-  "firestore": {
-    "rules": "firestore.rules"
-  },
-  "storage": {
-    "rules": "storage.rules"
-  },
   "flutter": {
     "platforms": {
       "android": {
         "default": {
-          "projectId": "nhomdttt-2026",
-          "appId": "1:975960129581:android:3ac23401e5b384191bf8a4",
+          "projectId": "studymate-flashcard-2026",
+          "appId": "1:741250494223:android:18369deae6c22d5ebb587a",
           "fileOutput": "android/app/google-services.json"
         }
       },
       "ios": {
         "default": {
-          "projectId": "nhomdttt-2026",
-          "appId": "1:975960129581:ios:5849cfec8006d0771bf8a4",
+          "projectId": "studymate-flashcard-2026",
+          "appId": "1:741250494223:ios:b7b8923141e2d23bbb587a",
           "uploadDebugSymbols": false,
           "fileOutput": "ios/Runner/GoogleService-Info.plist"
         }
       },
       "dart": {
         "lib/firebase_options.dart": {
-          "projectId": "nhomdttt-2026",
+          "projectId": "studymate-flashcard-2026",
           "configurations": {
-            "android": "1:975960129581:android:3ac23401e5b384191bf8a4",
-            "ios": "1:975960129581:ios:5849cfec8006d0771bf8a4"
+            "android": "1:741250494223:android:18369deae6c22d5ebb587a",
+            "ios": "1:741250494223:ios:b7b8923141e2d23bbb587a"
           }
         }
       }
     }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
   }
 }

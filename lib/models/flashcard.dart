@@ -1,15 +1,19 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// models/flashcard.dart - NỘI DUNG THẺ (không chứa tiến độ học)
 import 'package:uuid/uuid.dart';
+import 'base_entity.dart';
 
-class Flashcard {
-  final String id;
-  final String term;
-  final String meaning;
-  String? note;
-  String? imageUrl;
-  bool mastered;
-  int correctCount;
+class Flashcard implements BaseEntity {
+  @override
+  final String id; // ID ổn định, không đổi khi sửa nội dung
+  String term; // Mặt trước
+  String meaning; // Mặt sau
+  String? note; // Giải thích, hiện sau khi lật thẻ và khi xem lại quiz
+  String? imagePath;
+  List<String> wrongOptions; // Phương án sai tự nhập cho quiz
+
+  @override
   final DateTime createdAt;
+  @override
   DateTime updatedAt;
 
   Flashcard({
@@ -17,70 +21,81 @@ class Flashcard {
     required this.term,
     required this.meaning,
     this.note,
-    this.imageUrl,
-    this.mastered = false,
-    this.correctCount = 0,
+    this.imagePath,
+    List<String>? wrongOptions,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : id = id ?? const Uuid().v4(),
-       createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+  })  : id = id ?? const Uuid().v4(),
+        wrongOptions = wrongOptions ?? [],
+        createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? createdAt ?? DateTime.now();
 
-  Flashcard copyWith({
-    String? term,
-    String? meaning,
-    String? note,
-    String? imageUrl,
-    bool? mastered,
-    int? correctCount,
-    DateTime? updatedAt,
-  }) {
-    return Flashcard(
-      id: id,
-      term: term ?? this.term,
-      meaning: meaning ?? this.meaning,
-      note: note ?? this.note,
-      imageUrl: imageUrl ?? this.imageUrl,
-      mastered: mastered ?? this.mastered,
-      correctCount: correctCount ?? this.correctCount,
-      createdAt: createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
+  @override
+  String get name => term;
+  @override
+  String get description => meaning;
 
-  Map<String, dynamic> toFirestore() {
+  // Thẻ hợp lệ khi có đủ mặt trước và mặt sau
+  bool get isValid => term.trim().isNotEmpty && meaning.trim().isNotEmpty;
+
+  Flashcard copyWith({String? id}) => Flashcard(
+        id: id ?? this.id,
+        term: term,
+        meaning: meaning,
+        note: note,
+        imagePath: imagePath,
+        wrongOptions: List.of(wrongOptions),
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+      );
+
+  Map<String, dynamic> toJson() {
     return {
       'id': id,
       'term': term,
       'meaning': meaning,
       'note': note,
-      'imageUrl': imageUrl,
-      'mastered': mastered,
-      'correctCount': correctCount,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
+      'imagePath': imagePath,
+      'wrongOptions': wrongOptions,
     };
   }
 
-  factory Flashcard.fromFirestore(
-    String documentId,
-    Map<String, dynamic> data,
-  ) {
-    return Flashcard(
-      id: data['id'] as String? ?? documentId,
-      term: data['term'] as String? ?? '',
-      meaning: data['meaning'] as String? ?? '',
-      note: data['note'] as String?,
-      imageUrl: data['imageUrl'] as String?,
-      mastered: data['mastered'] as bool? ?? false,
-      correctCount: (data['correctCount'] as num?)?.toInt() ?? 0,
-      createdAt: _dateFrom(data['createdAt']),
-      updatedAt: _dateFrom(data['updatedAt']),
-    );
-  }
+  // Firestore: decks/{deckId}/cards/{id}; trường order (thứ tự trong bộ) do DataStore thêm vào
+  @override
+  Map<String, dynamic> toMap() => toFirestore();
 
-  static DateTime _dateFrom(dynamic value) {
-    if (value is Timestamp) return value.toDate();
-    return DateTime.tryParse(value?.toString() ?? '') ?? DateTime.now();
+  Map<String, dynamic> toFirestore({int? order}) => {
+    'term': term,
+    'meaning': meaning,
+    'note': note,
+    'imagePath': imagePath,
+    'wrongOptions': wrongOptions,
+    'createdAt': toTimestamp(createdAt),
+    'updatedAt': toTimestamp(updatedAt),
+    if (order != null) 'order': order,
+  };
+
+  factory Flashcard.fromMap(Map<String, dynamic> data, String id) => Flashcard.fromFirestore(data, id);
+
+  factory Flashcard.fromFirestore(Map<String, dynamic> data, String id) => Flashcard(
+    id: id,
+    term: data['term'] ?? '',
+    meaning: data['meaning'] ?? '',
+    note: data['note'],
+    imagePath: data['imagePath'],
+    wrongOptions: (data['wrongOptions'] as List?)?.cast<String>() ?? [],
+    createdAt: fromTimestamp(data['createdAt']),
+    updatedAt: fromTimestamp(data['updatedAt']),
+  );
+
+  factory Flashcard.fromJson(Map<String, dynamic> json) {
+    return Flashcard(
+      id: json['id'],
+      term: json['term'] ?? '',
+      meaning: json['meaning'] ?? '',
+      note: json['note'],
+      imagePath: json['imagePath'],
+      wrongOptions: (json['wrongOptions'] as List?)?.cast<String>() ?? [],
+    );
   }
 }

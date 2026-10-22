@@ -43,3 +43,17 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Dọn repo: file sinh ra khi build, cấu hình máy cục bộ, file rác hệ điều hành, thư mục skill của agent
+build/
+.dart_tool/
+android/.gradle/
+android/local.properties
+ios/Flutter/ephemeral/
+.DS_Store
+__MACOSX/
+.agents/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+.vscode/
+skills-lock.json

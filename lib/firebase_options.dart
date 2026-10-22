@@ -50,19 +50,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDJJWnWtWkz2DTtEMCEMBSzbVg0BqD-mxs',
-    appId: '1:975960129581:android:3ac23401e5b384191bf8a4',
-    messagingSenderId: '975960129581',
-    projectId: 'nhomdttt-2026',
-    storageBucket: 'nhomdttt-2026.firebasestorage.app',
+    apiKey: 'AIzaSyAaZPGmO0yCXpS0VNQDhA9PIWV8WHgKfU0',
+    appId: '1:741250494223:android:18369deae6c22d5ebb587a',
+    messagingSenderId: '741250494223',
+    projectId: 'studymate-flashcard-2026',
+    storageBucket: 'studymate-flashcard-2026.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBzX0TvpcrO0e7YO1_DWUZYwkYIS7T0-rM',
-    appId: '1:975960129581:ios:5849cfec8006d0771bf8a4',
-    messagingSenderId: '975960129581',
-    projectId: 'nhomdttt-2026',
-    storageBucket: 'nhomdttt-2026.firebasestorage.app',
+    apiKey: 'AIzaSyAALS7ZynIjfWB857VvOTdojwkdYuL7wCc',
+    appId: '1:741250494223:ios:b7b8923141e2d23bbb587a',
+    messagingSenderId: '741250494223',
+    projectId: 'studymate-flashcard-2026',
+    storageBucket: 'studymate-flashcard-2026.firebasestorage.app',
     iosBundleId: 'com.example.flashcardApp',
   );
 }

@@ -1,647 +1,514 @@
-import 'dart:io';
-import 'dart:math';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+// services/flashcard_service.dart - NGUỒN DỮ LIỆU DUY NHẤT CỦA ỨNG DỤNG
+// Trang chủ, Thư viện, Chi tiết bộ thẻ, Thống kê... đều đọc từ đây nên số liệu luôn khớp nhau.
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
-
+import 'package:flutter/scheduler.dart';
+import 'package:uuid/uuid.dart';
+import '../logic/learn_engine.dart';
+import '../logic/progress_lifecycle.dart';
+import '../logic/stats_calculator.dart';
+import '../models/card_progress.dart';
 import '../models/flashcard.dart';
 import '../models/flashcard_set.dart';
-import 'auth_service.dart';
+import '../models/quiz.dart';
+import '../models/user.dart';
+import '../models/user_data.dart';
+import '../utils/date_utils.dart';
+import 'data_store.dart';
+
+class DueItem {
+  final String deckId;
+  final String cardId;
+  const DueItem(this.deckId, this.cardId);
+}
 
 class FlashcardService with ChangeNotifier {
   static final FlashcardService _instance = FlashcardService._internal();
-
   factory FlashcardService() => _instance;
+  FlashcardService._internal();
 
-  FlashcardService._internal()
-    : _firestore = FirebaseFirestore.instance,
-      _storage = FirebaseStorage.instance,
-      _auth = FirebaseAuth.instance {
-    _auth.authStateChanges().listen((user) {
-      final nextUserId = user?.uid;
-      if (_activeUserId != nextUserId) {
-        _clearCache(nextUserId);
-        _notifySafely();
-      }
-    });
-  }
+  DataStore _store = LocalDataStore();
+  DateTime Function() clock = DateTime.now;
+  StreamSubscription<Set<String>>? _pendingSub;
+  void Function(int synced)? onSynced; // Báo khi kết quả kiểm tra làm lúc mất mạng đã đồng bộ xong
 
-  final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
-  final FirebaseAuth _auth;
-  final AuthService _authService = AuthService();
+  User? _user;
+  List<FlashcardSet> _decks = [];
+  UserData _data = UserData();
+  bool _isLoaded = false;
+  Future<void> _writeQueue = Future.value();
+  int _pendingWrites = 0;
 
-  final List<FlashcardSet> _sets = [];
-  List<FlashcardSet> get sets => List.unmodifiable(_sets);
+  bool get isLoaded => _isLoaded;
+  User? get user => _user;
+  String? get userId => _user?.id;
+  DateTime get today => dayOnly(clock());
 
-  String? _activeUserId;
-  bool _isDataLoaded = false;
-  Future<void>? _loadingFuture;
-  bool _isNotifying = false;
+  void useStore(DataStore store) => _store = store;
 
-  DocumentReference<Map<String, dynamic>> _userRef(String uid) =>
-      _firestore.collection('users').doc(uid);
-
-  CollectionReference<Map<String, dynamic>> _setsRef(String uid) =>
-      _userRef(uid).collection('flashcardSets');
-
-  CollectionReference<Map<String, dynamic>> _cardsRef(
-    String uid,
-    String setId,
-  ) => _setsRef(uid).doc(setId).collection('cards');
-
-  DocumentReference<Map<String, dynamic>> _statsRef(String uid) =>
-      _userRef(uid).collection('stats').doc('summary');
-
-  String _requireUserId() {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      throw StateError('Người dùng chưa đăng nhập.');
-    }
-    return uid;
-  }
-
-  void _clearCache(String? nextUserId) {
-    _sets.clear();
-    _activeUserId = nextUserId;
-    _isDataLoaded = false;
-    _loadingFuture = null;
-  }
-
-  void _notifySafely() {
-    if (_isNotifying) return;
-    _isNotifying = true;
+  // === TẢI / ĐĂNG XUẤT ===
+  Future<void> loadForUser(User user) async {
+    _user = user;
+    _decks = await _store.loadDecks(user.id);
+    _data = await _store.loadUserData(user.id);
+    _isLoaded = true;
+    _watchPending(user.id);
     notifyListeners();
-    _isNotifying = false;
   }
 
-  Future<void> loadData({bool forceRefresh = false}) async {
-    final uid = _requireUserId();
-    if (_activeUserId != uid) {
-      _clearCache(uid);
-    }
-
-    if (_isDataLoaded && !forceRefresh) return;
-
-    final currentLoad = _loadingFuture;
-    if (currentLoad != null) {
-      await currentLoad;
-      return;
-    }
-
-    final load = _loadFromFirestore(uid);
-    _loadingFuture = load;
-    try {
-      await load;
-    } finally {
-      if (identical(_loadingFuture, load)) {
-        _loadingFuture = null;
+  // Trạng thái "chờ đồng bộ" của kết quả kiểm tra lấy từ metadata.hasPendingWrites của Firestore
+  void _watchPending(String uid) {
+    _pendingSub?.cancel();
+    _pendingSub = _store.watchPendingAttempts(uid).listen((pending) {
+      var synced = 0;
+      for (final a in _data.quizHistory) {
+        final now = pending.contains(a.id);
+        if (a.pendingSync && !now) synced++;
+        a.pendingSync = now;
       }
-    }
-  }
-
-  Future<void> _loadFromFirestore(String uid) async {
-    final loadedSets = <FlashcardSet>[];
-    final setSnapshots = await _setsRef(uid).orderBy('createdAt').get();
-
-    for (final setDocument in setSnapshots.docs) {
-      final cardSnapshots = await setDocument.reference
-          .collection('cards')
-          .orderBy('createdAt')
-          .get();
-      final cards = cardSnapshots.docs
-          .map(
-            (document) => Flashcard.fromFirestore(document.id, document.data()),
-          )
-          .toList();
-      loadedSets.add(
-        FlashcardSet.fromFirestore(
-          setDocument.id,
-          uid,
-          setDocument.data(),
-          cards,
-        ),
-      );
-    }
-
-    // Không cho request cũ ghi dữ liệu vào cache sau khi user đã đổi/logout.
-    if (_auth.currentUser?.uid != uid || _activeUserId != uid) return;
-    _sets
-      ..clear()
-      ..addAll(loadedSets);
-    _isDataLoaded = true;
-  }
-
-  Future<List<Map<String, dynamic>>> getFlashcardsBySetId(String setId) async {
-    await loadData();
-    final index = _sets.indexWhere((set) => set.id == setId);
-    if (index == -1) return [];
-
-    return _sets[index].cards
-        .map(
-          (card) => {
-            'id': card.id,
-            'setId': setId,
-            'front': card.term,
-            'back': card.meaning,
-            'note': card.note,
-            'imageUrl': card.imageUrl,
-            'mastered': card.mastered,
-            'correctCount': card.correctCount,
-          },
-        )
-        .toList();
-  }
-
-  Future<void> updateLearningProgress({
-    required String setId,
-    required String cardId,
-    required bool isCorrect,
-  }) async {
-    await loadData();
-    final uid = _requireUserId();
-    final setIndex = _sets.indexWhere((set) => set.id == setId);
-    if (setIndex == -1) return;
-    final cardIndex = _sets[setIndex].cards.indexWhere(
-      (card) => card.id == cardId,
-    );
-    if (cardIndex == -1) return;
-
-    final card = _sets[setIndex].cards[cardIndex];
-    final wasMastered = card.mastered;
-    final nextCorrectCount = isCorrect ? card.correctCount + 1 : 0;
-    final nextMastered = isCorrect ? nextCorrectCount >= 3 : false;
-    final updatedCard = card.copyWith(
-      correctCount: nextCorrectCount,
-      mastered: nextMastered,
-      updatedAt: DateTime.now(),
-    );
-
-    await _cardsRef(uid, setId).doc(cardId).update({
-      'correctCount': nextCorrectCount,
-      'mastered': nextMastered,
-      'updatedAt': FieldValue.serverTimestamp(),
+      if (synced > 0) onSynced?.call(synced);
+      _notify();
     });
-    _sets[setIndex].cards[cardIndex] = updatedCard;
-
-    if (wasMastered != nextMastered) {
-      await _changeMasteredTotal(uid, nextMastered ? 1 : -1);
-    }
-    _notifySafely();
   }
 
-  Future<Map<String, dynamic>> getStats({bool forceRefresh = false}) async {
-    try {
-      await loadData(forceRefresh: forceRefresh);
-      final uid = _requireUserId();
-      final snapshots = await Future.wait([
-        _userRef(uid).get(),
-        _statsRef(uid).get(),
-      ]);
-      final userData = snapshots[0].data() ?? <String, dynamic>{};
-      final statsData = snapshots[1].data() ?? <String, dynamic>{};
+  void clear() {
+    _pendingSub?.cancel();
+    _pendingSub = null;
+    _user = null;
+    _decks = [];
+    _data = UserData();
+    _isLoaded = false;
+    notifyListeners();
+  }
 
-      final totalSets = _sets.length;
-      final totalCards = _sets.fold<int>(
-        0,
-        (total, set) => total + set.cards.length,
-      );
-      final totalMastered = getMasteredCardCount();
-      final dailyGoal = (userData['dailyGoal'] as num?)?.toInt() ?? 20;
-      final today = _dateKey(DateTime.now());
-      final todayStudied = statsData['todayDate'] == today
-          ? (statsData['todayStudied'] as num?)?.toInt() ?? 0
-          : 0;
-      final streak = (statsData['streak'] as num?)?.toInt() ?? 0;
-      final totalTests = (statsData['totalTests'] as num?)?.toInt() ?? 0;
-      final progress = dailyGoal > 0
-          ? (todayStudied / dailyGoal * 100).clamp(0, 100)
-          : 0;
-      final rememberRate = _calculateRememberRate();
-      final masteredRate = totalCards > 0
-          ? ((totalMastered / totalCards) * 100).round()
-          : 0;
+  // Báo thay đổi; nếu đang trong lúc dựng giao diện thì dời sang sau khung hình
+  void _notify() {
+    final binding = SchedulerBinding.instance;
+    if (binding.schedulerPhase == SchedulerPhase.persistentCallbacks) {
+      binding.addPostFrameCallback((_) => notifyListeners());
+    } else {
+      notifyListeners();
+    }
+  }
 
-      if ((statsData['totalMastered'] as num?)?.toInt() != totalMastered) {
-        await _statsRef(uid).set({
-          'totalMastered': totalMastered,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+  // Áp dụng thay đổi rồi ghi xuống bộ lưu trữ. [write] chỉ ghi các document liên quan.
+  // Ghi tuần tự để tránh ghi chồng; nếu ghi lỗi thì khôi phục trạng thái trước đó và trả về false.
+  Future<bool> _commit(void Function() change, Future<void> Function(DataStore s, String uid) write,
+      {bool decks = false}) async {
+    final uid = userId;
+    if (uid == null) return false;
+    final userSnapshot = jsonEncode(_data.toJson());
+    final decksSnapshot = decks ? jsonEncode(_decks.map((d) => d.toJson()).toList()) : null;
+    change();
+    _notify();
+    // Chỉ nối vào lần ghi trước khi nó còn đang chạy; nếu đã xong thì bắt đầu chuỗi mới
+    final previous = _pendingWrites == 0 ? Future<void>.value() : _writeQueue;
+    _pendingWrites++;
+    final pending = previous.then((_) async {
+      try {
+        await write(_store, uid);
+      } finally {
+        _pendingWrites--;
       }
+    });
+    _writeQueue = pending.catchError((_) {});
+    try {
+      await pending;
+      return true;
+    } catch (e) {
+      debugPrint('❌ Lỗi ghi dữ liệu: $e');
+      _data = UserData.fromJson(jsonDecode(userSnapshot));
+      if (decksSnapshot != null) {
+        _decks = (jsonDecode(decksSnapshot) as List).map((e) => FlashcardSet.fromJson(e)).toList();
+      }
+      _notify();
+      return false;
+    }
+  }
 
-      return {
-        'totalSets': totalSets,
-        'totalCards': totalCards,
-        'todayStudied': todayStudied,
-        'streak': streak,
-        'dailyGoal': dailyGoal,
-        'progress': progress.toStringAsFixed(0),
-        'rememberRate': rememberRate,
-        'totalTests': totalTests,
-        'totalMastered': totalMastered,
-        'masteredRate': masteredRate,
+  // Các kiểu ghi hay dùng
+  Future<void> _profile(DataStore s, String uid) => s.saveProfile(uid, _data);
+  Future<void> _learnState(DataStore s, String uid) => s.saveLearnState(uid, _data);
+  Future<void> Function(DataStore, String) _progressOf(String cardId, {bool profile = false}) => (s, uid) async {
+        await s.saveProgress(uid, cardId, _data.progress[cardId]);
+        if (profile) await s.saveProfile(uid, _data);
       };
-    } catch (error) {
-      debugPrint('Lỗi tải thống kê Firestore: $error');
-      return _defaultStats();
+
+  // === BỘ THẺ ===
+  FlashcardSet? deckById(String? id) {
+    if (id == null) return null;
+    for (final d in _decks) {
+      if (d.id == id) return d;
     }
+    return null;
   }
 
-  Map<String, dynamic> _defaultStats() => {
-    'totalSets': 0,
-    'totalCards': 0,
-    'todayStudied': 0,
-    'streak': 0,
-    'dailyGoal': 20,
-    'progress': '0',
-    'rememberRate': 0,
-    'totalTests': 0,
-    'totalMastered': 0,
-    'masteredRate': 0,
-  };
+  bool isOwner(FlashcardSet? d) => d != null && d.userId == userId;
+  bool isAvailable(FlashcardSet? d) => d != null && (isOwner(d) || d.isPublic);
 
-  int _calculateRememberRate() {
-    final totalCards = _sets.fold<int>(
-      0,
-      (total, set) => total + set.cards.length,
-    );
-    if (totalCards == 0) return 0;
-    final masteredCards = getMasteredCardCount();
-    return ((masteredCards / totalCards) * 100).round();
+  List<FlashcardSet> get myDecks => _decks.where(isOwner).toList();
+  List<String> get savedIds => List.unmodifiable(_data.savedDeckIds);
+  bool isSaved(String deckId) => _data.savedDeckIds.contains(deckId);
+  List<FlashcardSet> get exploreDecks => _decks.where((d) => d.isPublic && !isOwner(d)).toList();
+
+  // Bộ thẻ của tôi và đã lưu, mới cập nhật trước
+  List<FlashcardSet> get recentDecks {
+    final list = _decks.where((d) => isAvailable(d) && (isOwner(d) || isSaved(d.id))).toList();
+    list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return list;
   }
 
-  Future<void> recordStudySession(int cardCount) async {
-    if (cardCount <= 0) return;
-    final uid = _requireUserId();
-    final reference = _statsRef(uid);
-    final now = DateTime.now();
-    final today = _dateKey(now);
-
-    await _firestore.runTransaction((transaction) async {
-      final snapshot = await transaction.get(reference);
-      final data = snapshot.data() ?? <String, dynamic>{};
-      final lastStudyDate = data['lastStudyDate'] as String? ?? '';
-      final storedToday = data['todayDate'] as String? ?? '';
-      var streak = (data['streak'] as num?)?.toInt() ?? 0;
-      var todayStudied = (data['todayStudied'] as num?)?.toInt() ?? 0;
-
-      if (storedToday == today) {
-        todayStudied += cardCount;
-      } else {
-        todayStudied = cardCount;
-        if (lastStudyDate.isEmpty) {
-          streak = 1;
-        } else {
-          final lastDate = DateTime.tryParse(lastStudyDate);
-          final difference = lastDate == null
-              ? 2
-              : DateTime(now.year, now.month, now.day)
-                    .difference(
-                      DateTime(lastDate.year, lastDate.month, lastDate.day),
-                    )
-                    .inDays;
-          if (difference == 1) {
-            streak += 1;
-          } else if (difference > 1) {
-            streak = 1;
-          }
-        }
-      }
-
-      transaction.set(reference, {
-        'streak': streak,
-        'todayStudied': todayStudied,
-        'todayDate': today,
-        'lastStudyDate': today,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    });
-  }
-
-  Future<void> recordTestSession(
-    int correctAnswers,
-    int totalQuestions,
-    int newMasteredCards,
-  ) async {
-    if (totalQuestions <= 0) return;
-    final uid = _requireUserId();
-    final update = <String, dynamic>{
-      'totalTests': FieldValue.increment(1),
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-    if (newMasteredCards > 0) {
-      update['totalMastered'] = FieldValue.increment(newMasteredCards);
+  // Bộ thẻ cho thẻ "Học tiếp" ở Trang chủ
+  FlashcardSet? get continueDeck {
+    final last = deckById(_data.lastDeckId);
+    if (isAvailable(last) && last!.validCards.isNotEmpty) return last;
+    for (final d in recentDecks) {
+      if (d.validCards.isNotEmpty) return d;
     }
-    await _statsRef(uid).set(update, SetOptions(merge: true));
-    await recordStudySession(totalQuestions);
-    _notifySafely();
+    return null;
   }
 
-  Future<void> markCardAsMastered(String setId, String cardId) async {
-    await _setMastered(setId, cardId, true);
+  bool get isNewUser =>
+      myDecks.isEmpty && _data.savedDeckIds.isEmpty && _data.quizHistory.isEmpty && _data.progress.isEmpty;
+
+  bool hasDuplicateTitle(String title, {String? exceptId}) {
+    final t = title.trim().toLowerCase();
+    return myDecks.any((d) => d.id != exceptId && d.title.trim().toLowerCase() == t);
   }
 
-  Future<void> unmarkCardAsMastered(String setId, String cardId) async {
-    await _setMastered(setId, cardId, false);
-  }
-
-  Future<void> _setMastered(String setId, String cardId, bool mastered) async {
-    await loadData();
-    final uid = _requireUserId();
-    final setIndex = _sets.indexWhere((set) => set.id == setId);
-    if (setIndex == -1) return;
-    final cardIndex = _sets[setIndex].cards.indexWhere(
-      (card) => card.id == cardId,
-    );
-    if (cardIndex == -1) return;
-
-    final card = _sets[setIndex].cards[cardIndex];
-    if (card.mastered == mastered) return;
-    await _cardsRef(uid, setId).doc(cardId).update({
-      'mastered': mastered,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-    _sets[setIndex].cards[cardIndex] = card.copyWith(
-      mastered: mastered,
-      updatedAt: DateTime.now(),
-    );
-    await _changeMasteredTotal(uid, mastered ? 1 : -1);
-    _notifySafely();
-  }
-
-  Future<void> _changeMasteredTotal(String uid, int difference) async {
-    final reference = _statsRef(uid);
-    await _firestore.runTransaction((transaction) async {
-      final snapshot = await transaction.get(reference);
-      final current = (snapshot.data()?['totalMastered'] as num?)?.toInt() ?? 0;
-      transaction.set(reference, {
-        'totalMastered': max(0, current + difference),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-    });
-  }
-
-  int getMasteredCardCount() {
-    return _sets.fold<int>(
-      0,
-      (total, set) => total + set.cards.where((card) => card.mastered).length,
-    );
-  }
-
-  List<Flashcard> getUnmasteredCards() =>
-      getAllCards().where((card) => !card.mastered).toList(growable: false);
-
-  List<Flashcard> getMasteredCards() =>
-      getAllCards().where((card) => card.mastered).toList(growable: false);
-
-  Future<void> addSet(String title) async {
-    final uid = _requireUserId();
-    await loadData();
-    final reference = _setsRef(uid).doc();
-    final now = DateTime.now();
-    final set = FlashcardSet(
-      id: reference.id,
-      userId: uid,
+  Future<FlashcardSet?> createDeck({
+    required String title,
+    String description = '',
+    String subject = 'Khác',
+    String visibility = 'private',
+  }) async {
+    final now = clock();
+    final deck = FlashcardSet(
+      id: const Uuid().v4(),
+      userId: userId!,
+      ownerName: _user!.username,
       title: title.trim(),
+      description: description.trim(),
+      subject: subject,
+      visibility: visibility,
+      status: 'draft', // Bản nháp cho đến khi có thẻ hợp lệ và bấm Hoàn tất
       cards: [],
       createdAt: now,
       updatedAt: now,
     );
-    await reference.set(set.toFirestore());
-    _sets.add(set);
-    _notifySafely();
+    final ok = await _commit(() => _decks.add(deck), (s, _) => s.saveDeck(deck), decks: true);
+    return ok ? deck : null;
   }
 
-  Future<void> updateSet(String id, String newTitle) async {
-    await loadData();
-    final uid = _requireUserId();
-    final index = _sets.indexWhere((set) => set.id == id);
-    if (index == -1) return;
-    final now = DateTime.now();
-    await _setsRef(uid).doc(id).update({
-      'title': newTitle.trim(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-    _sets[index] = _sets[index].copyWith(
-      title: newTitle.trim(),
+  Future<bool> updateDeckInfo(String deckId, {
+    required String title,
+    required String description,
+    required String subject,
+    required String visibility,
+  }) {
+    return _commit(() {
+      final d = deckById(deckId)!;
+      d.title = title.trim();
+      d.description = description.trim();
+      d.subject = subject;
+      d.visibility = visibility;
+      d.updatedAt = clock();
+    }, (s, _) => s.saveDeckInfo(deckById(deckId)!), decks: true);
+  }
+
+  Future<bool> finishDeck(String deckId) => _commit(() {
+    final d = deckById(deckId)!;
+    d.status = 'ready';
+    d.updatedAt = clock();
+  }, (s, _) => s.saveDeckInfo(deckById(deckId)!), decks: true);
+
+  // Xóa bộ thẻ cùng tiến độ các thẻ; lịch sử kiểm tra được giữ (hiển thị bằng deckTitle đã lưu)
+  Future<bool> deleteDeck(String deckId) {
+    final d = deckById(deckId);
+    if (d == null) return Future.value(true);
+    final ids = d.cards.map((c) => c.id).toSet();
+    final withProgress = ids.where(_data.progress.containsKey).toList();
+    return _commit(() {
+      _decks.removeWhere((x) => x.id == deckId);
+      _data.progress.removeWhere((k, _) => ids.contains(k));
+      _data.starredCardIds.removeWhere(ids.contains);
+      _data.savedDeckIds.remove(deckId);
+      _data.positions.remove(deckId);
+      _data.learnScores.remove(deckId);
+      _data.learnRounds.remove(deckId);
+      _data.flashSort.remove(deckId);
+      if (_data.quizDraft?.deckId == deckId) _data.quizDraft = null;
+      if (_data.lastDeckId == deckId) _data.lastDeckId = null;
+    }, (s, uid) async {
+      await s.deleteDeck(d);
+      for (final id in withProgress) {
+        await s.saveProgress(uid, id, null);
+      }
+      await s.saveProfile(uid, _data);
+      await s.saveLearnState(uid, _data);
+    }, decks: true);
+  }
+
+  // Sao chép thành bộ thẻ riêng tư của tôi (thẻ có ID mới, tiến độ bắt đầu lại)
+  Future<FlashcardSet?> copyDeck(String deckId) async {
+    final src = deckById(deckId);
+    if (src == null) return null;
+    final now = clock();
+    final copy = FlashcardSet(
+      id: const Uuid().v4(),
+      userId: userId!,
+      ownerName: _user!.username,
+      title: '${src.title} (bản sao)',
+      description: src.description,
+      subject: src.subject,
+      visibility: 'private',
+      cards: src.cards.map((c) => c.copyWith(id: const Uuid().v4())).toList(),
+      createdAt: now,
       updatedAt: now,
     );
-    _notifySafely();
+    final ok = await _commit(() => _decks.add(copy), (s, _) => s.saveDeck(copy), decks: true);
+    return ok ? copy : null;
   }
 
-  Future<void> deleteSet(String id) async {
-    await loadData();
-    final uid = _requireUserId();
-    final index = _sets.indexWhere((set) => set.id == id);
-    if (index == -1) return;
-    final set = _sets[index];
+  // Lưu chỉ là đánh dấu, không tạo bản sao
+  Future<bool> toggleSave(String deckId) => _commit(() {
+    if (!_data.savedDeckIds.remove(deckId)) _data.savedDeckIds.add(deckId);
+  }, _profile);
 
-    for (final card in set.cards) {
-      await _deleteCardImage(uid, card.id, card.imageUrl);
-    }
+  // === THẺ ===
+  // Ghi thẻ (kèm thứ tự) và thời điểm cập nhật của bộ thẻ
+  Future<void> Function(DataStore, String) _cardWrite(String deckId, String cardId) => (s, _) async {
+        final d = deckById(deckId)!;
+        final i = d.cards.indexWhere((c) => c.id == cardId);
+        if (i >= 0) await s.saveCard(deckId, d.cards[i], i);
+        await s.saveDeckInfo(d);
+      };
 
-    final cardDocuments = await _cardsRef(uid, id).get();
-    for (final document in cardDocuments.docs) {
-      await document.reference.delete();
-    }
-    await _setsRef(uid).doc(id).delete();
-    _sets.removeAt(index);
+  Future<bool> addCard(String deckId, Flashcard card) => _commit(() {
+    final d = deckById(deckId)!;
+    d.cards.add(card);
+    d.updatedAt = clock();
+  }, _cardWrite(deckId, card.id), decks: true);
 
-    final masteredCount = set.cards.where((card) => card.mastered).length;
-    if (masteredCount > 0) {
-      await _changeMasteredTotal(uid, -masteredCount);
-    }
-    _notifySafely();
+  Future<bool> updateCard(String deckId, Flashcard card) => _commit(() {
+    final d = deckById(deckId)!;
+    final i = d.cards.indexWhere((c) => c.id == card.id);
+    card.updatedAt = clock();
+    if (i >= 0) d.cards[i] = card;
+    d.updatedAt = clock();
+  }, _cardWrite(deckId, card.id), decks: true);
+
+  Future<bool> deleteCard(String deckId, String cardId) {
+    final hadProgress = _data.progress.containsKey(cardId);
+    return _commit(() {
+      final d = deckById(deckId)!;
+      d.cards.removeWhere((c) => c.id == cardId);
+      d.updatedAt = clock();
+      _data.progress.remove(cardId);
+      _data.starredCardIds.remove(cardId);
+    }, (s, uid) async {
+      await s.deleteCard(deckId, cardId);
+      await s.saveDeckInfo(deckById(deckId)!);
+      if (hadProgress) await s.saveProgress(uid, cardId, null);
+      await s.saveProfile(uid, _data);
+    }, decks: true);
   }
 
-  Future<void> addCard(
-    String setId,
-    Flashcard card, {
-    String? imageFilePath,
-  }) async {
-    await loadData();
-    final uid = _requireUserId();
-    final setIndex = _sets.indexWhere((set) => set.id == setId);
-    if (setIndex == -1) throw StateError('Không tìm thấy bộ thẻ.');
+  // Đổi chỗ hai thẻ: ghi lại thứ tự của đúng hai thẻ đó
+  Future<bool> moveCard(String deckId, String cardId, int dir) {
+    final d = deckById(deckId)!;
+    final i = d.cards.indexWhere((c) => c.id == cardId);
+    final j = i + dir;
+    if (i < 0 || j < 0 || j >= d.cards.length) return Future.value(true);
+    final otherId = d.cards[j].id;
+    return _commit(() {
+      final tmp = d.cards[i];
+      d.cards[i] = d.cards[j];
+      d.cards[j] = tmp;
+      d.updatedAt = clock();
+    }, (s, uid) async {
+      await s.saveCard(deckId, d.cards[j], j); // Thẻ vừa di chuyển
+      await _cardWrite(deckId, otherId)(s, uid); // Thẻ bị đổi chỗ + thời điểm cập nhật bộ thẻ
+    }, decks: true);
+  }
 
-    final imageUrl = imageFilePath == null
-        ? card.imageUrl
-        : await _uploadCardImage(uid, card.id, imageFilePath);
-    final now = DateTime.now();
-    final savedCard = card.copyWith(imageUrl: imageUrl, updatedAt: now);
-    final batch = _firestore.batch();
-    batch.set(_cardsRef(uid, setId).doc(savedCard.id), savedCard.toFirestore());
-    batch.update(_setsRef(uid).doc(setId), {
-      'updatedAt': FieldValue.serverTimestamp(),
+  bool isStarred(String cardId) => _data.starredCardIds.contains(cardId);
+
+  Future<bool> toggleStar(String cardId) => _commit(() {
+    if (!_data.starredCardIds.remove(cardId)) _data.starredCardIds.add(cardId);
+  }, _profile);
+
+  // === TIẾN ĐỘ ===
+  CardProgress? progressOf(String cardId) => _data.progress[cardId];
+  CardStage stageOfCard(String cardId) => stageOf(_data.progress[cardId]);
+
+  Map<CardStage, int> stageCounts(FlashcardSet d) {
+    final counts = {for (final s in CardStage.values) s: 0};
+    for (final c in d.validCards) {
+      counts[stageOfCard(c.id)] = counts[stageOfCard(c.id)]! + 1;
+    }
+    return counts;
+  }
+
+  int knownIn(FlashcardSet d) => d.validCards.where((c) => _data.progress[c.id]?.known == true).length;
+  bool touched(FlashcardSet d) => d.cards.any((c) => _data.progress.containsKey(c.id));
+
+  // Thẻ đến hạn ôn của các bộ thẻ tôi sở hữu, đã lưu hoặc đã từng học
+  List<DueItem> dueList({String? deckId}) {
+    final out = <DueItem>[];
+    for (final d in _decks) {
+      if (!isAvailable(d) || (deckId != null && d.id != deckId)) continue;
+      if (!isOwner(d) && !isSaved(d.id) && !touched(d)) continue;
+      for (final c in d.validCards) {
+        final p = _data.progress[c.id];
+        if (p != null && p.isDue(today)) out.add(DueItem(d.id, c.id));
+      }
+    }
+    return out;
+  }
+
+  // Lọc bộ thẻ giống dueList() để số thẻ đến hạn khớp giữa các màn hình
+  int dueOn(DateTime day) {
+    var n = 0;
+    final target = dayOnly(day);
+    for (final d in _decks) {
+      if (!isAvailable(d)) continue;
+      if (!isOwner(d) && !isSaved(d.id) && !touched(d)) continue;
+      for (final c in d.validCards) {
+        if (_data.progress[c.id]?.due == target) n++;
+      }
+    }
+    return n;
+  }
+
+  void _addActivity(int n) {
+    final key = dayKey(today);
+    _data.activity[key] = (_data.activity[key] ?? 0) + n;
+  }
+
+  // Lật thẻ lần đầu trong phiên Thẻ ghi nhớ
+  Future<bool> recordFlashcardSeen(String cardId) => _commit(() {
+    _addActivity(1);
+    _data.progress[cardId] = onFlashcardSeen(_data.progress[cardId], today);
+  }, _progressOf(cardId, profile: true));
+
+  // Lưu kèm điểm từng thẻ của phần Học để thoát ra vẫn làm tiếp được
+  Future<bool> recordLearnAnswer(String cardId, LearnAnswerResult r, {LearnSession? session}) => _commit(() {
+    if (session != null) {
+      _data.learnScores[session.deck.id] = Map.of(session.score);
+      _data.learnRounds[session.deck.id] = session.round;
+    }
+    if (r.firstTimeSeen) _addActivity(1);
+    _data.progress[cardId] = onLearnAnswer(
+      _data.progress[cardId],
+      correct: r.correct,
+      reachedMastery: r.reachedMastery,
+      today: today,
+    );
+  }, (s, uid) async {
+    await _progressOf(cardId, profile: true)(s, uid);
+    if (session != null) await s.saveLearnState(uid, _data);
+  });
+
+  Future<bool> gradeReview(String cardId, ReviewGrade grade, {required bool firstTime}) => _commit(() {
+    if (firstTime) _addActivity(1);
+    _data.progress[cardId] = applyReviewGrade(_data.progress[cardId], grade, today);
+  }, _progressOf(cardId, profile: true));
+
+  Future<bool> completeSession() => _commit(() => _data.sessions++, _profile);
+
+  Map<String, int>? learnScoreOf(String deckId) => _data.learnScores[deckId];
+  int learnRoundOf(String deckId) => _data.learnRounds[deckId] ?? 1;
+  double learnCompletion(FlashcardSet d) =>
+      LearnSession.completion(d.validCards.map((c) => c.id).toList(), _data.learnScores[d.id] ?? const {});
+  Future<bool> saveLearnRound(String deckId, int round) =>
+      _commit(() => _data.learnRounds[deckId] = round, _learnState);
+  Future<bool> resetLearn(String deckId) => _commit(() {
+    _data.learnScores.remove(deckId);
+    _data.learnRounds.remove(deckId);
+  }, _learnState);
+
+  // Phân loại Đã biết / Đang học của lượt Thẻ ghi nhớ đang dở
+  Map<String, bool> flashSortOf(String deckId) => Map.of(_data.flashSort[deckId] ?? const {});
+  Future<bool> saveFlashSort(String deckId, Map<String, bool> sort) => _commit(() {
+    if (sort.isEmpty) {
+      _data.flashSort.remove(deckId);
+    } else {
+      _data.flashSort[deckId] = Map.of(sort);
+    }
+  }, _learnState);
+
+  int positionOf(String deckId) => _data.positions[deckId] ?? 0;
+
+  Future<bool> savePosition(String deckId, int index) => _commit(() => _data.positions[deckId] = index, _learnState);
+
+  Future<bool> setLastDeck(String deckId) => _commit(() => _data.lastDeckId = deckId, _profile);
+
+  // === QUIZ ===
+  QuizDraft? get quizDraft => _data.quizDraft;
+  List<QuizAttempt> get history => List.unmodifiable(_data.quizHistory);
+
+  QuizAttempt? attemptById(String id) {
+    for (final a in _data.quizHistory) {
+      if (a.id == id) return a;
+    }
+    return null;
+  }
+
+  // Lưu kết quả; câu sai/bỏ trống đưa thẻ về Đang học và đến hạn ôn hôm nay
+  Future<bool> submitQuiz(QuizAttempt attempt) {
+    if (_data.quizHistory.any((a) => a.id == attempt.id)) return Future.value(true); // Tránh ghi trùng
+    final missed = attempt.items.where((x) => !x.isCorrect).map((x) => x.question.cardId).toSet();
+    return _commit(() {
+      _data.quizHistory.add(attempt);
+      _data.quizDraft = null;
+      for (final id in missed) {
+        _data.progress[id] = onQuizMissed(_data.progress[id], today);
+      }
+    }, (s, uid) async {
+      await s.saveAttempt(uid, attempt);
+      await s.saveLearnState(uid, _data);
+      for (final id in missed) {
+        await s.saveProgress(uid, id, _data.progress[id]);
+      }
     });
-    await batch.commit();
-
-    _sets[setIndex].cards.add(savedCard);
-    _notifySafely();
   }
 
-  Future<void> updateCard(
-    String setId,
-    String cardId,
-    Flashcard newCard, {
-    String? imageFilePath,
-  }) async {
-    await loadData();
-    final uid = _requireUserId();
-    final setIndex = _sets.indexWhere((set) => set.id == setId);
-    if (setIndex == -1) throw StateError('Không tìm thấy bộ thẻ.');
-    final cardIndex = _sets[setIndex].cards.indexWhere(
-      (card) => card.id == cardId,
-    );
-    if (cardIndex == -1) throw StateError('Không tìm thấy flashcard.');
+  // Xóa một kết quả kiểm tra khỏi lịch sử
+  Future<bool> deleteAttempt(String attemptId) =>
+      _commit(() => _data.quizHistory.removeWhere((a) => a.id == attemptId), (s, uid) => s.deleteAttempt(uid, attemptId));
 
-    final oldCard = _sets[setIndex].cards[cardIndex];
-    final imageUrl = imageFilePath == null
-        ? oldCard.imageUrl
-        : await _uploadCardImage(uid, cardId, imageFilePath);
-    final savedCard = Flashcard(
-      id: cardId,
-      term: newCard.term,
-      meaning: newCard.meaning,
-      note: newCard.note,
-      imageUrl: imageUrl,
-      mastered: oldCard.mastered,
-      correctCount: oldCard.correctCount,
-      createdAt: oldCard.createdAt,
-      updatedAt: DateTime.now(),
-    );
+  Future<bool> saveQuizDraft(QuizDraft draft) => _commit(() => _data.quizDraft = draft, _learnState);
+  Future<bool> clearQuizDraft() => _commit(() => _data.quizDraft = null, _learnState);
 
-    final batch = _firestore.batch();
-    batch.set(_cardsRef(uid, setId).doc(cardId), savedCard.toFirestore());
-    batch.update(_setsRef(uid).doc(setId), {
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-    await batch.commit();
-    _sets[setIndex].cards[cardIndex] = savedCard;
-    _notifySafely();
+  // === THỐNG KÊ / HỒ SƠ ===
+  StatsSnapshot get stats => computeStats(_data, clock());
+  int get streak => computeStreak(_data, today);
+  int get todayCount => countOn(_data, today);
+  int get dailyGoal => _data.dailyGoal;
+  bool get remindEnabled => _data.remindEnabled;
+  String get remindTime => _data.remindTime;
+
+  Future<bool> setDailyGoal(int goal) => _commit(() => _data.dailyGoal = goal, _profile);
+
+  Future<bool> setReminder({required bool enabled, String? time}) => _commit(() {
+    _data.remindEnabled = enabled;
+    if (time != null) _data.remindTime = time;
+  }, _profile);
+
+  // Đổi tên hiển thị (Firebase Auth đã cập nhật ở AuthService): cập nhật tên tác giả trên các bộ thẻ của tôi
+  Future<bool> applyProfile(User updated, int goal) {
+    final renamed = updated.username != _user?.username;
+    _user = updated;
+    return _commit(() {
+      _data.dailyGoal = goal;
+      for (final d in myDecks) {
+        d.ownerName = updated.username;
+      }
+    }, (s, uid) async {
+      await s.saveProfile(uid, _data);
+      if (renamed) await s.renameOwner(uid, updated.username);
+    }, decks: true);
   }
-
-  Future<void> deleteCard(String setId, String cardId) async {
-    await loadData();
-    final uid = _requireUserId();
-    final setIndex = _sets.indexWhere((set) => set.id == setId);
-    if (setIndex == -1) return;
-    final cardIndex = _sets[setIndex].cards.indexWhere(
-      (card) => card.id == cardId,
-    );
-    if (cardIndex == -1) return;
-    final card = _sets[setIndex].cards[cardIndex];
-
-    await _deleteCardImage(uid, cardId, card.imageUrl);
-    final batch = _firestore.batch();
-    batch.delete(_cardsRef(uid, setId).doc(cardId));
-    batch.update(_setsRef(uid).doc(setId), {
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-    await batch.commit();
-    _sets[setIndex].cards.removeAt(cardIndex);
-    if (card.mastered) await _changeMasteredTotal(uid, -1);
-    _notifySafely();
-  }
-
-  Future<String> _uploadCardImage(
-    String uid,
-    String cardId,
-    String filePath,
-  ) async {
-    final reference = _storage.ref('users/$uid/flashcards/$cardId/image.jpg');
-    await reference.putFile(
-      File(filePath),
-      SettableMetadata(contentType: 'image/jpeg'),
-    );
-    return reference.getDownloadURL();
-  }
-
-  Future<void> _deleteCardImage(
-    String uid,
-    String cardId,
-    String? imageUrl,
-  ) async {
-    if (imageUrl == null || imageUrl.isEmpty) return;
-    try {
-      await _storage.ref('users/$uid/flashcards/$cardId/image.jpg').delete();
-    } on FirebaseException catch (error) {
-      if (error.code != 'object-not-found') rethrow;
-    }
-  }
-
-  Future<String> getUserName() async {
-    return (await _authService.getCurrentUser())?.username ?? 'Người dùng';
-  }
-
-  Future<void> setUserName(String name) async {
-    final uid = _requireUserId();
-    await _userRef(uid).update({'username': name.trim()});
-    await _auth.currentUser?.updateDisplayName(name.trim());
-    _notifySafely();
-  }
-
-  Future<int> getDailyGoal() async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return 20;
-    final snapshot = await _userRef(uid).get();
-    return (snapshot.data()?['dailyGoal'] as num?)?.toInt() ?? 20;
-  }
-
-  Future<void> setDailyGoal(int goal) async {
-    final uid = _requireUserId();
-    await _userRef(uid).set({'dailyGoal': goal}, SetOptions(merge: true));
-    _notifySafely();
-  }
-
-  Future<bool> isDarkMode() async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return false;
-    final snapshot = await _userRef(uid).get();
-    return snapshot.data()?['darkMode'] as bool? ?? false;
-  }
-
-  Future<void> setDarkMode(bool value) async {
-    final uid = _auth.currentUser?.uid;
-    if (uid == null) return;
-    await _userRef(uid).set({'darkMode': value}, SetOptions(merge: true));
-    _notifySafely();
-  }
-
-  void resetLoadState() {
-    _isDataLoaded = false;
-    _loadingFuture = null;
-  }
-
-  void clearUserData() {
-    _clearCache(_auth.currentUser?.uid);
-    _notifySafely();
-  }
-
-  Future<void> switchUserData() async {
-    clearUserData();
-    if (_auth.currentUser != null) {
-      await loadData(forceRefresh: true);
-    }
-  }
-
-  List<Flashcard> getAllCards() => [for (final set in _sets) ...set.cards];
-
-  List<Flashcard> getRandomCardsForTest(int count) {
-    final shuffled = List<Flashcard>.from(getAllCards())..shuffle(Random());
-    return shuffled.take(count).toList();
-  }
-
-  List<Flashcard> getUnmasteredCardsForTest(int count) {
-    final shuffled = List<Flashcard>.from(getUnmasteredCards())
-      ..shuffle(Random());
-    return shuffled.take(count).toList();
-  }
-
-  String _dateKey(DateTime date) =>
-      '${date.year.toString().padLeft(4, '0')}-'
-      '${date.month.toString().padLeft(2, '0')}-'
-      '${date.day.toString().padLeft(2, '0')}';
 }

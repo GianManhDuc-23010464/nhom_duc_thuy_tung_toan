@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
 import '../services/auth_service.dart';
+import '../services/connectivity_service.dart';
+import '../utils/validators.dart';
+import 'forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
-  final Future<void> Function() onLoginSuccess;
+  final VoidCallback onLoginSuccess;
   final VoidCallback onNavigateToRegister;
 
   const LoginPage({
@@ -21,49 +27,40 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
-
-  Future<void> _showForgotPasswordDialog() async {
-    final sent = await showDialog<bool>(
-      context: context,
-      builder: (_) =>
-          _ForgotPasswordDialog(initialEmail: _emailController.text.trim()),
-    );
-    if (sent == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra hộp thư và thư rác.',
-          ),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
+  String? _error; // Lỗi từ máy chủ / mạng, hiển thị dưới biểu mẫu
 
   void _login() async {
+    if (_isLoading) return;
+    setState(() => _error = null);
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
-      final success = await AuthService().login(
+      if (!await context.read<ConnectivityService>().check()) {
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _error = 'Không có kết nối mạng. Kiểm tra Wi-Fi hoặc dữ liệu di động rồi thử lại.';
+        });
+        return;
+      }
+
+      if (!mounted) return;
+      final failure = await context.read<AuthService>().login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+      });
 
-      if (success) {
-        await widget.onLoginSuccess();
+      if (failure == null) {
+        widget.onLoginSuccess();
       } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email hoặc mật khẩu không đúng'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() => _error = failure.message);
       }
     }
   }
@@ -71,8 +68,10 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Đăng nhập')),
-      body: Padding(
+      appBar: AppBar(
+        title: const Text('Đăng nhập'),
+      ),
+      body: ResponsiveBody(child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
@@ -83,7 +82,7 @@ class _LoginPageState extends State<LoginPage> {
               Icon(
                 Icons.library_books,
                 size: 80,
-                color: Theme.of(context).primaryColor,
+                color: context.palette.brandText,
               ),
               const SizedBox(height: 20),
               const Text(
@@ -102,15 +101,9 @@ class _LoginPageState extends State<LoginPage> {
                   prefixIcon: Icon(Icons.email),
                 ),
                 keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập email';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Email không hợp lệ';
-                  }
-                  return null;
-                },
+                autofillHints: const [AutofillHints.email],
+                textInputAction: TextInputAction.next,
+                validator: validateEmail,
               ),
               const SizedBox(height: 16),
 
@@ -124,9 +117,7 @@ class _LoginPageState extends State<LoginPage> {
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
                     ),
                     onPressed: () {
                       setState(() {
@@ -135,6 +126,7 @@ class _LoginPageState extends State<LoginPage> {
                     },
                   ),
                 ),
+                onFieldSubmitted: (_) => _login(),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Vui lòng nhập mật khẩu';
@@ -142,33 +134,43 @@ class _LoginPageState extends State<LoginPage> {
                   return null;
                 },
               ),
+
+              // Quên mật khẩu
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: _isLoading ? null : _showForgotPasswordDialog,
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ForgotPasswordPage(initialEmail: _emailController.text.trim()),
+                    ),
+                  ),
                   child: const Text('Quên mật khẩu?'),
                 ),
               ),
-              const SizedBox(height: 16),
+
+              if (_error != null) ...[
+                AuthErrorBox(message: _error!),
+                const SizedBox(height: 12),
+              ],
+              const SizedBox(height: 8),
 
               // Nút đăng nhập
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                      onPressed: _login,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                        backgroundColor: Theme.of(context).primaryColor,
-                      ),
-                      child: const Text(
-                        'ĐĂNG NHẬP',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                onPressed: _login,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                ),
+                child: const Text(
+                  'ĐĂNG NHẬP',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
 
               const SizedBox(height: 20),
 
@@ -189,7 +191,7 @@ class _LoginPageState extends State<LoginPage> {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 
@@ -201,127 +203,27 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-class _ForgotPasswordDialog extends StatefulWidget {
-  const _ForgotPasswordDialog({required this.initialEmail});
-
-  final String initialEmail;
-
-  @override
-  State<_ForgotPasswordDialog> createState() => _ForgotPasswordDialogState();
-}
-
-class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _emailController;
-  bool _isSending = false;
-  String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _emailController = TextEditingController(text: widget.initialEmail);
-  }
-
-  Future<void> _sendResetEmail() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _isSending = true;
-      _errorMessage = null;
-    });
-
-    final authService = AuthService();
-    final sent = await authService.sendPasswordResetEmail(
-      _emailController.text,
-    );
-    if (!mounted) return;
-
-    if (sent) {
-      Navigator.pop(context, true);
-      return;
-    }
-
-    setState(() {
-      _isSending = false;
-      _errorMessage = switch (authService.lastErrorCode) {
-        'invalid-email' => 'Email không hợp lệ.',
-        'configuration-not-found' || 'operation-not-allowed' =>
-          'Firebase Authentication chưa bật đăng nhập Email/Password.',
-        'too-many-requests' =>
-          'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.',
-        'network-request-failed' =>
-          'Không thể kết nối mạng. Vui lòng kiểm tra kết nối.',
-        _ => 'Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại.',
-      };
-    });
-  }
+// Hộp thông báo lỗi dưới biểu mẫu xác thực
+class AuthErrorBox extends StatelessWidget {
+  final String message;
+  const AuthErrorBox({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Quên mật khẩu'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Nhập email đã đăng ký. Firebase sẽ gửi đường dẫn để bạn tạo mật khẩu mới.',
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _emailController,
-              autofocus: true,
-              enabled: !_isSending,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.done,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.email),
-              ),
-              validator: (value) {
-                final email = value?.trim() ?? '';
-                if (email.isEmpty) return 'Vui lòng nhập email';
-                if (!email.contains('@')) return 'Email không hợp lệ';
-                return null;
-              },
-              onFieldSubmitted: (_) {
-                if (!_isSending) _sendResetEmail();
-              },
-            ),
-            if (_errorMessage != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _errorMessage!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ],
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.palette.errorBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.palette.errorBg),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isSending ? null : () => Navigator.pop(context, false),
-          child: const Text('Hủy'),
-        ),
-        FilledButton(
-          onPressed: _isSending ? null : _sendResetEmail,
-          child: _isSending
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Gửi email'),
-        ),
-      ],
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: context.palette.error),
+          const SizedBox(width: 8),
+          Expanded(child: Text(message, style: TextStyle(color: context.palette.error))),
+        ],
+      ),
     );
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
   }
 }
