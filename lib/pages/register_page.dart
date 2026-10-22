@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common.dart';
 import '../services/auth_service.dart';
+import '../services/connectivity_service.dart';
+import '../utils/validators.dart';
+import 'login_page.dart' show AuthErrorBox;
 
 class RegisterPage extends StatefulWidget {
   final VoidCallback onRegisterSuccess;
@@ -24,47 +30,52 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _agreed = false;
+  bool _showAgreeError = false;
+  String? _emailTakenFor; // Email đã có tài khoản
+  String? _error;
 
   void _register() async {
-    if (_formKey.currentState!.validate()) {
+    if (_isLoading) return;
+    setState(() {
+      _error = null;
+      _showAgreeError = !_agreed;
+    });
+    final valid = _formKey.currentState!.validate();
+    if (valid && _agreed) {
       setState(() {
         _isLoading = true;
       });
 
-      final authService = AuthService();
-      final success = await authService.register(
+      if (!await context.read<ConnectivityService>().check()) {
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _error = 'Không có kết nối mạng. Tạo tài khoản cần kết nối Internet.';
+        });
+        return;
+      }
+
+      if (!mounted) return;
+      final failure = await context.read<AuthService>().register(
         _usernameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
       );
 
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+      });
 
-      if (success) {
+      if (failure == null) {
+        // Đăng ký xong được đăng nhập luôn
         widget.onRegisterSuccess();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đăng ký thành công! Vui lòng đăng nhập.'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      } else if (failure.isEmailTaken) {
+        _emailTakenFor = _emailController.text.trim();
+        _formKey.currentState!.validate();
       } else {
-        final message = switch (authService.lastErrorCode) {
-          'email-already-in-use' => 'Email đã được sử dụng',
-          'weak-password' => 'Mật khẩu chưa đủ mạnh',
-          'invalid-email' => 'Email không hợp lệ',
-          'configuration-not-found' || 'operation-not-allowed' =>
-            'Firebase Authentication chưa bật đăng nhập Email/Password',
-          'profile-permission-denied' =>
-            'Không thể tạo hồ sơ người dùng do Firestore từ chối quyền truy cập',
-          'profile-write-failed' =>
-            'Đã tạo tài khoản nhưng không thể lưu hồ sơ người dùng',
-          _ => 'Không thể đăng ký. Vui lòng thử lại',
-        };
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: Colors.red),
-        );
+        setState(() => _error = failure.message);
       }
     }
   }
@@ -72,8 +83,10 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Đăng ký tài khoản')),
-      body: Padding(
+      appBar: AppBar(
+        title: const Text('Đăng ký tài khoản'),
+      ),
+      body: ResponsiveBody(child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
@@ -84,7 +97,7 @@ class _RegisterPageState extends State<RegisterPage> {
               Icon(
                 Icons.library_books,
                 size: 80,
-                color: Theme.of(context).primaryColor,
+                color: context.palette.brandText,
               ),
               const SizedBox(height: 20),
               const Text(
@@ -124,11 +137,10 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập email';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Email không hợp lệ';
+                  final error = validateEmail(value);
+                  if (error != null) return error;
+                  if (_emailTakenFor != null && value!.trim().toLowerCase() == _emailTakenFor!.toLowerCase()) {
+                    return 'Email này đã có tài khoản. Hãy đăng nhập hoặc dùng email khác.';
                   }
                   return null;
                 },
@@ -145,9 +157,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   prefixIcon: const Icon(Icons.lock),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
                     ),
                     onPressed: () {
                       setState(() {
@@ -178,9 +188,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscureConfirmPassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                      _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
                     ),
                     onPressed: () {
                       setState(() {
@@ -199,26 +207,52 @@ class _RegisterPageState extends State<RegisterPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 8),
+
+              // Đồng ý điều khoản
+              CheckboxListTile(
+                value: _agreed,
+                onChanged: (v) => setState(() {
+                  _agreed = v ?? false;
+                  if (_agreed) _showAgreeError = false;
+                }),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Tôi đồng ý với điều khoản sử dụng và chính sách quyền riêng tư',
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+              if (_showAgreeError)
+                Padding(
+                  padding: const EdgeInsets.only(left: 12, bottom: 8),
+                  child: Text(
+                    'Bạn cần đồng ý điều khoản để tạo tài khoản',
+                    style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 12),
+                  ),
+                ),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                AuthErrorBox(message: _error!),
+              ],
+              const SizedBox(height: 22),
 
               // Nút đăng ký
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
-                      onPressed: _register,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 50),
-                        backgroundColor: Theme.of(context).primaryColor,
-                      ),
-                      child: const Text(
-                        'ĐĂNG KÝ',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                onPressed: _register,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 52),
+                ),
+                child: const Text(
+                  'ĐĂNG KÝ',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
 
               const SizedBox(height: 20),
 
@@ -239,7 +273,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 

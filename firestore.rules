@@ -1,14 +1,47 @@
 rules_version = '2';
 
+// Quy tắc bảo mật Firestore cho Flashcard And Quizz
+// - users/{uid} và mọi subcollection (progress, quizAttempts, state): chỉ chính chủ đọc/ghi.
+// - decks/{deckId} và cards: đọc được nếu là chủ hoặc bộ thẻ công khai; chỉ chủ được tạo/sửa/xóa.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, create, update, delete: if request.auth != null
-        && request.auth.uid == userId;
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
 
       match /{document=**} {
-        allow read, create, update, delete: if request.auth != null
-          && request.auth.uid == userId;
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    match /decks/{deckId} {
+      function ownsData(data) {
+        return signedIn() && data.userId == request.auth.uid;
+      }
+
+      allow read: if resource.data.visibility == 'public' || ownsData(resource.data);
+      allow create: if ownsData(request.resource.data);
+      // Không cho đổi chủ sở hữu khi sửa
+      allow update: if ownsData(resource.data) && ownsData(request.resource.data);
+      allow delete: if ownsData(resource.data);
+
+      match /cards/{cardId} {
+        function deckPath() {
+          return /databases/$(database)/documents/decks/$(deckId);
+        }
+        // Trước khi ghi (sửa / xóa thẻ, xóa cả bộ bằng batch) hoặc sau khi ghi (tạo bộ kèm thẻ bằng batch)
+        function ownsDeck() {
+          return signedIn() && (
+            (exists(deckPath()) && get(deckPath()).data.userId == request.auth.uid) ||
+            (existsAfter(deckPath()) && getAfter(deckPath()).data.userId == request.auth.uid)
+          );
+        }
+
+        allow read: if get(deckPath()).data.visibility == 'public' || ownsDeck();
+        allow write: if ownsDeck();
       }
     }
   }
