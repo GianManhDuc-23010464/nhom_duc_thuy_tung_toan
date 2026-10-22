@@ -88,6 +88,14 @@ Giảng viên hướng dẫn: Nguyễn Lệ Thu
 |---|---|---|---|
 | <img src="docs/screenshots/test.png" width="200"> | <img src="docs/screenshots/result.png" width="200"> | <img src="docs/screenshots/stats.png" width="200"> | <img src="docs/screenshots/profile.png" width="200"> |
 
+| Thẻ ghi nhớ | Thiết lập bài kiểm tra | Trước khi nộp bài | Ôn tập ngắt quãng |
+|---|---|---|---|
+| <img src="docs/screenshots/flashcard.png" width="200"> | <img src="docs/screenshots/quiz_setup.png" width="200"> | <img src="docs/screenshots/quiz_end.png" width="200"> | <img src="docs/screenshots/review.png" width="200"> |
+
+| Tạo bộ thẻ | Thêm thẻ | Trang chủ (tối) | Chi tiết bộ thẻ (tối) |
+|---|---|---|---|
+| <img src="docs/screenshots/create_deck.png" width="200"> | <img src="docs/screenshots/add_card.png" width="200"> | <img src="docs/screenshots/dark_home.png" width="200"> | <img src="docs/screenshots/dark_detail.png" width="200"> |
+
 ## 4. Hướng dẫn sử dụng
 
 ### Bắt đầu
