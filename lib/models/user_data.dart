@@ -17,8 +17,6 @@ class UserData {
   Map<String, int> learnRounds; // deckId -> lượt đang làm của phần Học
   Map<String, Map<String, bool>> flashSort; // deckId -> (cardId -> true: Đã biết, false: Đang học) của lượt Thẻ ghi nhớ dở
   int dailyGoal;
-  bool remindEnabled;
-  String remindTime;
 
   UserData({
     Map<String, CardProgress>? progress,
@@ -34,8 +32,6 @@ class UserData {
     Map<String, int>? learnRounds,
     Map<String, Map<String, bool>>? flashSort,
     this.dailyGoal = 20,
-    this.remindEnabled = false,
-    this.remindTime = '20:00',
   })  : progress = progress ?? {},
         savedDeckIds = savedDeckIds ?? [],
         starredCardIds = starredCardIds ?? [],
@@ -60,16 +56,12 @@ class UserData {
     'learnRounds': learnRounds,
     'flashSort': flashSort,
     'dailyGoal': dailyGoal,
-    'remindEnabled': remindEnabled,
-    'remindTime': remindTime,
   };
 
   // === FIRESTORE ===
   // users/{uid}: cài đặt và số liệu (ghi merge, không đụng username/email do AuthService quản lý)
   Map<String, dynamic> toFirestore() => {
     'dailyGoal': dailyGoal,
-    'remindEnabled': remindEnabled,
-    'remindTime': remindTime,
     'savedDeckIds': savedDeckIds,
     'starredCardIds': starredCardIds,
     'lastDeckId': lastDeckId,
@@ -111,8 +103,6 @@ class UserData {
       flashSort: (l['flashSort'] as Map? ?? {})
           .map((k, v) => MapEntry('$k', (v as Map).map((c, b) => MapEntry('$c', b as bool)))),
       dailyGoal: p['dailyGoal'] ?? 20,
-      remindEnabled: p['remindEnabled'] ?? false,
-      remindTime: p['remindTime'] ?? '20:00',
     );
   }
 
@@ -133,7 +123,5 @@ class UserData {
     flashSort: (json['flashSort'] as Map<String, dynamic>? ?? {})
         .map((k, v) => MapEntry(k, (v as Map<String, dynamic>).map((c, b) => MapEntry(c, b as bool)))),
     dailyGoal: json['dailyGoal'] ?? 20,
-    remindEnabled: json['remindEnabled'] ?? false,
-    remindTime: json['remindTime'] ?? '20:00',
   );
 }

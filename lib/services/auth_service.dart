@@ -71,7 +71,7 @@ class AuthService {
   Future<AuthFailure?> sendPasswordReset(String email) =>
       _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
 
-  // Đổi tên hiển thị trên Firebase Auth và users/{uid}. Tên tác giả trên bộ thẻ do FlashcardService cập nhật.
+  // Đổi tên hiển thị trên Firebase Auth và users/{uid}.
   Future<({User? user, AuthFailure? failure})> updateUsername(String username) async {
     final u = _auth.currentUser;
     if (u == null) return (user: null, failure: const AuthFailure('no-current-user', 'Phiên đăng nhập đã hết hạn.'));

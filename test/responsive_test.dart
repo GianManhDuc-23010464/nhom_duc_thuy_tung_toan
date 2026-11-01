@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:flashcard_app/logic/quiz_engine.dart';
-import 'package:flashcard_app/main.dart' show TabNavigator, ThemeProvider;
+import 'package:flashcard_app/main.dart' show TabNavigator;
 import 'package:flashcard_app/models/flashcard.dart';
 import 'package:flashcard_app/models/quiz.dart';
 import 'package:flashcard_app/models/user.dart';
@@ -31,7 +31,6 @@ const sizes = <String, Size>{
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final service = FlashcardService();
-  final themeProvider = ThemeProvider(() async {});
   late String deckId;
   late String attemptId;
   late QuizDraft draft;
@@ -81,7 +80,6 @@ void main() {
               ChangeNotifierProvider.value(value: service),
               ChangeNotifierProvider.value(value: ConnectivityService()),
               ChangeNotifierProvider(create: (_) => TabNavigator()),
-              ChangeNotifierProvider.value(value: themeProvider),
             ],
             child: MaterialApp(
               theme: AppTheme.lightTheme,

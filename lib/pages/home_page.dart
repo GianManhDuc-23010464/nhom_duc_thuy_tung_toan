@@ -95,7 +95,6 @@ class _HomePageState extends State<HomePage> {
   // Đầu trang: nút tìm kiếm, chuỗi ngày học, ảnh đại diện
   Widget _buildHeader(FlashcardService service) {
     final p = context.palette;
-    final user = service.user;
     final streak = service.streak;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -135,22 +134,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           const SizedBox(width: 10),
-          GestureDetector(
-            onTap: () => context.read<TabNavigator>().go(TabNavigator.profile),
-            child: Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(color: p.card, shape: BoxShape.circle),
-              child: CircleAvatar(
-                radius: 26,
-                backgroundColor: p.brand,
-                foregroundColor: Colors.white,
-                child: Text(
-                  (user?.username.trim().isNotEmpty ?? false) ? user!.username.trim()[0].toUpperCase() : '?',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
