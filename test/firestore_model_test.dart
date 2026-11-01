@@ -122,6 +122,8 @@ void main() {
       },
       quizDraft: QuizDraft(deckId: 'd1', questions: [], answers: {0: 1}, typed: {1: 'x'}, instantFeedback: true),
       dailyGoal: 30,
+      remindEnabled: true,
+      remindTime: '21:15',
     );
     final back = UserData.fromFirestore(
       await roundTrip(d.toFirestore()),

@@ -6,6 +6,7 @@ import 'package:flashcard_app/models/flashcard.dart';
 import 'package:flashcard_app/models/quiz.dart';
 import 'package:flashcard_app/models/user.dart';
 import 'package:flashcard_app/pages/learn_page.dart';
+import 'package:flashcard_app/pages/login_page.dart';
 import 'package:flashcard_app/pages/set_detail_page.dart';
 import 'package:flashcard_app/pages/test_page.dart';
 import 'package:flashcard_app/services/connectivity_service.dart';
@@ -41,6 +42,19 @@ void main() {
       await service.addCard(q.id, Flashcard(term: 'Q$i', meaning: 'A$i'));
     }
     quizDeckId = q.id;
+  });
+
+  testWidgets('Đăng nhập: kiểm tra biểu mẫu và có Quên mật khẩu', (tester) async {
+    await tester.pumpWidget(host(LoginPage(onLoginSuccess: () {}, onNavigateToRegister: () {})));
+    await tester.tap(find.text('ĐĂNG NHẬP'));
+    await tester.pump();
+    expect(find.text('Vui lòng nhập email'), findsOneWidget);
+    expect(find.text('Vui lòng nhập mật khẩu'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField).first, 'sai-dinh-dang');
+    await tester.tap(find.text('ĐĂNG NHẬP'));
+    await tester.pump();
+    expect(find.text('Email chưa đúng định dạng, ví dụ ban@email.com'), findsOneWidget);
+    expect(find.text('Quên mật khẩu?'), findsOneWidget);
   });
 
   testWidgets('Chi tiết bộ thẻ: các chế độ học và 3 trạng thái tiến độ', (tester) async {
