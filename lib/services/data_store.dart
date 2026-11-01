@@ -25,13 +25,11 @@ abstract class DataStore {
   Future<void> saveCard(String deckId, Flashcard card, int order);
   Future<void> deleteCard(String deckId, String cardId);
   Future<void> deleteDeck(FlashcardSet deck); // Xóa cả subcollection cards
-  Future<void> renameOwner(String userId, String ownerName); // Tên tác giả trên các bộ thẻ của người dùng
 
   Future<void> saveProfile(String userId, UserData data); // users/{uid}
   Future<void> saveLearnState(String userId, UserData data); // users/{uid}/state/learn
   Future<void> saveProgress(String userId, String cardId, CardProgress? progress); // null: xóa
   Future<void> saveAttempt(String userId, QuizAttempt attempt);
-  Future<void> deleteAttempt(String userId, String attemptId);
 }
 
 // === FIRESTORE ===
@@ -154,14 +152,6 @@ class FirestoreDataStore implements DataStore {
       });
 
   @override
-  Future<void> renameOwner(String userId, String ownerName) => _write(() async {
-        final mine = await decks.collection.where('userId', isEqualTo: userId).get();
-        await _commitInChunks([
-          for (final d in mine.docs) (b) => b.update(d.reference, {'ownerName': ownerName}),
-        ]);
-      });
-
-  @override
   Future<void> saveProfile(String userId, UserData data) =>
       _write(() => _user(userId).set(data.toFirestore(), SetOptions(merge: true)));
 
@@ -176,10 +166,6 @@ class FirestoreDataStore implements DataStore {
 
   @override
   Future<void> saveAttempt(String userId, QuizAttempt attempt) => _write(() => attempts(userId).add(attempt));
-
-  @override
-  Future<void> deleteAttempt(String userId, String attemptId) =>
-      _write(() => attempts(userId).delete(attemptId));
 }
 
 // === BỘ NHỚ (TEST) ===
@@ -242,19 +228,10 @@ class LocalDataStore implements DataStore {
   Future<void> deleteDeck(FlashcardSet deck) => _write(() => decks.remove(deck.id));
 
   @override
-  Future<void> renameOwner(String userId, String ownerName) => _write(() {
-        for (final d in decks.values.where((d) => d['userId'] == userId)) {
-          d['ownerName'] = ownerName;
-        }
-      });
-
-  @override
   Future<void> saveProfile(String userId, UserData data) => _updateUser(userId, (d) {
         final p = UserData.fromFirestore(data.toFirestore());
         d
           ..dailyGoal = p.dailyGoal
-          ..remindEnabled = p.remindEnabled
-          ..remindTime = p.remindTime
           ..savedDeckIds = p.savedDeckIds
           ..starredCardIds = p.starredCardIds
           ..lastDeckId = p.lastDeckId
@@ -288,8 +265,4 @@ class LocalDataStore implements DataStore {
           ..removeWhere((a) => a.id == attempt.id)
           ..add(QuizAttempt.fromJson(_copy(attempt.toJson())));
       });
-
-  @override
-  Future<void> deleteAttempt(String userId, String attemptId) =>
-      _updateUser(userId, (d) => d.quizHistory.removeWhere((a) => a.id == attemptId));
 }

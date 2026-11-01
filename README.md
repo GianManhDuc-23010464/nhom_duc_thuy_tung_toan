@@ -30,7 +30,6 @@ Flashcard And Quizz giúp sinh viên tự tạo bộ thẻ ghi nhớ, học bằ
 |---|---|---|
 | Gian Mạnh Đức | 23010464 | Kết nối Firebase, xác thực, lớp dữ liệu (`data_store`, `flashcard_service`), Trang chủ, Thư viện, Chi tiết bộ thẻ |
 | Nguyễn Đình Tùng | 24100188 | Lớp chung `BaseEntity`, `FirestoreRepository<T>`, `BaseScaffold`, Thống kê, `ListFlashcardSet`, test Firestore |
-| Mai Thị Thủy | 23010362 | Trang cá nhân & cài đặt, sửa hồ sơ, đăng nhập / đăng ký / quên mật khẩu, nhắc học, `ListQuizAttempt` |
 | Vũ Đức Toàn | 24100233 | Học thẻ ghi nhớ, học theo lượt, bài kiểm tra & kết quả, `ListFlashcard`, thư mục `logic/` |
 
 Giảng viên hướng dẫn: Nguyễn Lệ Thu
@@ -38,10 +37,7 @@ Giảng viên hướng dẫn: Nguyễn Lệ Thu
 ## 2. Chức năng
 
 **Tài khoản**
-- Đăng ký, đăng nhập, đăng xuất bằng email / mật khẩu (Firebase Authentication); tự giữ phiên đăng nhập.
-- Quên mật khẩu: gửi email đặt lại mật khẩu.
-- Đổi tên hiển thị; tên tác giả trên các bộ thẻ được cập nhật theo.
-- Thông báo lỗi bằng tiếng Việt (email đã tồn tại, sai mật khẩu, mất mạng…).
+- `AuthService` và dữ liệu phiên Firebase vẫn được giữ lại; các màn hình đăng nhập, đăng ký, hồ sơ và cài đặt đã được tách khỏi nhánh này.
 
 **Trang chủ**
 - Học tiếp bộ thẻ gần nhất (hiện % câu hỏi đã hoàn thành), bộ thẻ gần đây, số thẻ đến hạn ôn hôm nay, mục tiêu trong ngày, gợi ý bộ thẻ công khai.
@@ -51,7 +47,7 @@ Giảng viên hướng dẫn: Nguyễn Lệ Thu
 - Sửa, xóa, sao chép bộ thẻ; đặt chế độ riêng tư hoặc công khai; phân loại theo môn học.
 - Thêm / sửa / xóa / sắp xếp thẻ: mặt trước, mặt sau, ghi chú, ảnh, tối đa 3 phương án sai tự nhập.
 - Gắn sao thẻ khó để học riêng.
-- Màn quản lý (Cá nhân › Cài đặt): danh sách bộ thẻ, thẻ, kết quả kiểm tra với thêm / sửa / xóa có xác nhận.
+- Màn quản lý: danh sách bộ thẻ và thẻ với thêm / sửa / xóa có xác nhận.
 
 **Thư viện**
 - 3 tab: Của tôi / Đã lưu / Khám phá (bộ thẻ công khai của mọi người dùng).
@@ -70,10 +66,8 @@ Giảng viên hướng dẫn: Nguyễn Lệ Thu
 - Kết quả: % câu đúng, số câu đúng / sai, xem lại từng câu kèm đáp án đúng và giải thích, lọc câu sai, làm lại các câu sai; câu sai đưa thẻ về trạng thái Đang học.
 - Lịch sử các lần làm bài.
 
-**Thống kê và cá nhân**
+**Thống kê**
 - Số thẻ theo trạng thái (Chưa học / Đang học / Thành thạo), chuỗi ngày học, mục tiêu thẻ mỗi ngày, biểu đồ hoạt động theo ngày / tuần.
-- Giao diện sáng / tối / theo hệ thống.
-- Nhắc học hằng ngày bằng thông báo cục bộ vào giờ đã chọn.
 
 **Offline**
 - Dữ liệu được lưu trong cache của Firestore; thao tác khi mất mạng sẽ tự đồng bộ khi có mạng lại. Kết quả bài kiểm tra chưa đồng bộ được đánh dấu "chờ đồng bộ".
@@ -84,9 +78,9 @@ Giảng viên hướng dẫn: Nguyễn Lệ Thu
 |---|---|---|---|
 | <img src="docs/screenshots/home.png" width="200"> | <img src="docs/screenshots/library.png" width="200"> | <img src="docs/screenshots/deck.png" width="200"> | <img src="docs/screenshots/learn.png" width="200"> |
 
-| Bài kiểm tra | Kết quả | Thống kê | Cá nhân |
+| Bài kiểm tra | Kết quả | Thống kê |
 |---|---|---|---|
-| <img src="docs/screenshots/test.png" width="200"> | <img src="docs/screenshots/result.png" width="200"> | <img src="docs/screenshots/stats.png" width="200"> | <img src="docs/screenshots/profile.png" width="200"> |
+| <img src="docs/screenshots/test.png" width="200"> | <img src="docs/screenshots/result.png" width="200"> | <img src="docs/screenshots/stats.png" width="200"> |
 
 | Thẻ ghi nhớ | Thiết lập bài kiểm tra | Trước khi nộp bài | Ôn tập ngắt quãng |
 |---|---|---|---|
@@ -99,9 +93,7 @@ Giảng viên hướng dẫn: Nguyễn Lệ Thu
 ## 4. Hướng dẫn sử dụng
 
 ### Bắt đầu
-1. Mở app, chọn **Đăng ký ngay**, nhập tên hiển thị, email, mật khẩu (ít nhất 6 ký tự) và đồng ý điều khoản. Đăng ký xong được đăng nhập luôn.
-2. Tài khoản mới chưa có dữ liệu: Trang chủ gợi ý **Tạo bộ thẻ đầu tiên** hoặc **Khám phá thư viện công khai** để lưu một bộ có sẵn.
-3. Lần sau mở app sẽ tự vào Trang chủ (phiên đăng nhập được Firebase giữ lại).
+Giao diện đăng nhập / đăng ký đã được tách khỏi nhánh này. Ứng dụng chỉ mở nội dung học tập khi Firebase có phiên đăng nhập còn hiệu lực; nếu chưa có phiên, sẽ hiện thông báo chờ bổ sung màn hình xác thực.
 
 ### Tạo bộ thẻ
 1. Bấm **+ Tạo bộ thẻ mới** (Trang chủ) hoặc **+** (Thư viện).
@@ -132,10 +124,6 @@ Giảng viên hướng dẫn: Nguyễn Lệ Thu
 ### Ôn tập
 - Trang chủ hiện số thẻ đến hạn ôn → **Ôn tập ngay**. Lật thẻ rồi tự đánh giá **Quên / Khó / Được / Dễ**; app tính ngày ôn tiếp theo cho từng thẻ.
 
-### Cá nhân
-- **Chỉnh sửa hồ sơ**: đổi tên hiển thị và mục tiêu thẻ mỗi ngày.
-- **Nhắc ôn tập hằng ngày**: bật lên, cho phép thông báo, chạm để chọn giờ. Lịch nhắc lưu theo tài khoản, đăng nhập trên máy khác sẽ được đặt lại.
-- **Quản lý bộ thẻ / kết quả kiểm tra**, **Giao diện** (sáng / tối / theo hệ thống), **Gửi email đặt lại mật khẩu**, **Đăng xuất**.
 
 ## 5. Công nghệ
 
@@ -143,16 +131,15 @@ Giảng viên hướng dẫn: Nguyễn Lệ Thu
 |---|---|---|---|
 | Framework | Flutter / Dart | SDK ≥ 3.9 | Giao diện đa nền tảng Android, iOS |
 | Firebase | `firebase_core` | ^4.0.0 | Khởi tạo Firebase |
-| Xác thực | `firebase_auth` | ^6.0.0 | Đăng ký, đăng nhập, đặt lại mật khẩu |
+| Xác thực | `firebase_auth` | ^6.0.0 | Khôi phục và quản lý phiên Firebase |
 | Cơ sở dữ liệu | `cloud_firestore` | ^6.7.1 | Lưu bộ thẻ, tiến độ, kết quả; cache offline |
 | Trạng thái | `provider` | ^6.1.1 | Cung cấp service cho các màn hình |
 | Biểu đồ | `fl_chart` | ^0.68.0 | Biểu đồ hoạt động ở Thống kê |
-| Thông báo | `flutter_local_notifications`, `timezone`, `flutter_timezone` | ^22.3.2, ^0.11.2, ^5.1.1 | Nhắc học hằng ngày đúng giờ theo múi giờ của máy |
 | Mạng | `connectivity_plus` | ^7.3.2 | Phát hiện mất mạng, hiện banner offline |
 | Ảnh | `image_picker`, `path_provider`, `path` | | Chọn ảnh, lưu vào thư mục của app |
-| Khác | `uuid`, `shared_preferences` | | Sinh ID; lưu chế độ giao diện |
+| Khác | `uuid` | | Sinh ID |
 | Phát âm | MethodChannel `flashcard_app/speech` | | Gọi `AVSpeechSynthesizer` (iOS) và `TextToSpeech` (Android), tự chọn giọng Việt / Anh |
-| Kiểm thử | `flutter_test`, `integration_test`, `fake_cloud_firestore`, `firebase_auth_mocks`, `mock_exceptions` | | Test không cần Firebase thật |
+| Kiểm thử | `flutter_test`, `fake_cloud_firestore`, `firebase_auth_mocks`, `mock_exceptions` | | Test không cần Firebase thật |
 
 ## 6. Kiến trúc
 
@@ -170,17 +157,17 @@ SM-2, thống kê)                    ├─ FirestoreDataStore → FirestoreRep
 
 **Các tầng**
 - **UI** (`pages/`, `widgets/`): chỉ hiển thị và gọi service, không truy cập Firestore trực tiếp.
-- **Service** (`services/`): `FlashcardService` giữ toàn bộ dữ liệu của người dùng đang đăng nhập trong bộ nhớ; `AuthService`, `ReminderService`, `ConnectivityService` lo phần việc riêng.
+- **Service** (`services/`): `FlashcardService` giữ toàn bộ dữ liệu của người dùng đang đăng nhập trong bộ nhớ; `AuthService` và `ConnectivityService` lo phần việc riêng.
 - **Logic** (`logic/`): Dart thuần, không phụ thuộc Flutter hay Firebase (tạo câu hỏi, học theo lượt, SM-2, thống kê) nên test được độc lập.
 - **Lưu trữ** (`DataStore`): interface ranh giới với backend. App dùng `FirestoreDataStore`; test dùng `LocalDataStore` trong bộ nhớ.
 
-**Provider** cung cấp trong `main.dart`: `FlashcardService`, `AuthService`, `ConnectivityService`, `ReminderService`, `ThemeProvider` (sáng / tối, đăng xuất) và `TabNavigator` (chuyển 4 tab Trang chủ / Thư viện / Thống kê / Cá nhân từ bất kỳ màn hình nào).
+**Provider** cung cấp trong `main.dart`: `FlashcardService`, `AuthService`, `ConnectivityService` và `TabNavigator` (chuyển 3 tab Trang chủ / Thư viện / Thống kê).
 
 **Luồng khởi động**
 1. `main()` khởi tạo Firebase và bật cache offline của Firestore.
 2. Màn khởi động chờ Firebase khôi phục phiên (`authStateChanges`), đọc hồ sơ `users/{uid}`.
-3. `FlashcardService.loadForUser` tải bộ thẻ (của mình + công khai), tiến độ, kết quả kiểm tra, trạng thái học dở; đặt lại lịch nhắc học theo cài đặt của tài khoản.
-4. Nếu phiên hết hạn hoặc bị đăng xuất ở nơi khác, app tự quay về màn Đăng nhập.
+3. `FlashcardService.loadForUser` tải bộ thẻ (của mình + công khai), tiến độ, kết quả kiểm tra, trạng thái học dở.
+4. Nếu phiên hết hạn hoặc bị đăng xuất ở nơi khác, app quay về màn thông báo chưa có phiên đăng nhập.
 
 **Luồng ghi dữ liệu** (ví dụ sửa một thẻ)
 1. Màn hình gọi `service.updateCard(...)`.
@@ -194,19 +181,18 @@ SM-2, thống kê)                    ├─ FirestoreDataStore → FirestoreRep
 
 ```
 lib/
-├── main.dart                  # Khởi tạo Firebase, Provider, luồng đăng nhập, bottom navigation
+├── main.dart                  # Khởi tạo Firebase, Provider, khôi phục phiên, bottom navigation
 ├── firebase_options.dart      # Sinh bởi flutterfire configure
 ├── models/                    # BaseEntity, FlashcardSet, Flashcard, CardProgress, Quiz, User, UserData
 ├── logic/                     # quiz_engine, learn_engine, progress_lifecycle (SM-2), stats_calculator
 ├── services/                  # auth_service, data_store, firestore_repository, flashcard_service,
-│                              # connectivity_service, reminder_service, speech_service, seed_data
-├── pages/                     # Các màn hình (+ ListFlashcardSet, ListFlashcard, ListQuizAttempt)
+│                              # connectivity_service, speech_service, seed_data
+├── pages/                     # Các màn hình (+ ListFlashcardSet, ListFlashcard)
 ├── widgets/                   # base_scaffold, flip_card, set_card, gradient_learn_button, common
 ├── theme/                     # app_theme (màu sáng / tối)
 ├── utils/                     # date_utils, validators, nav
 └── tools/seed.dart            # Đẩy bộ thẻ công khai mẫu lên Firestore (chạy một lần)
 test/                          # Unit test và widget test
-integration_test/              # Kiểm thử luồng chính trên thiết bị
 docs/screenshots/              # Ảnh màn hình
 firestore.rules                # Quy tắc bảo mật Firestore
 ```
@@ -226,15 +212,15 @@ firestore.rules                # Quy tắc bảo mật Firestore
 | `QuizAttempt` | Một lần làm bài | `deckId`, `deckTitle`, `takenAt`, `durationSeconds`, `items` (câu hỏi + đáp án đã chọn) |
 | `QuizDraft` | Bài đang làm dở | `questions`, `answers`, `typed`, `currentIndex`, `instantFeedback` |
 | `User` | Hồ sơ | `id` (uid), `username`, `email`, `createdAt` |
-| `UserData` | Dữ liệu học của một người | tiến độ, bộ đã lưu, thẻ gắn sao, lịch sử kiểm tra, `activity` (số lượt học theo ngày), mục tiêu (mặc định 20 thẻ), nhắc học (mặc định 20:00), trạng thái học dở |
+| `UserData` | Dữ liệu học của một người | tiến độ, bộ đã lưu, thẻ gắn sao, lịch sử kiểm tra, `activity` (số lượt học theo ngày), mục tiêu (mặc định 20 thẻ), trạng thái học dở |
 
 ```
 decks/{deckId}                       # Bộ thẻ: userId, ownerName, title, description, subject,
 │                                    #         visibility, status, createdAt, updatedAt
 └── cards/{cardId}                   # Thẻ: term, meaning, note, wrongOptions, imagePath, order, createdAt, updatedAt
 
-users/{uid}                          # Hồ sơ + cài đặt: username, email, createdAt, dailyGoal, remindEnabled,
-│                                    #   remindTime, savedDeckIds, starredCardIds, lastDeckId, sessions, activity
+users/{uid}                          # Hồ sơ + cài đặt: username, email, createdAt, dailyGoal,
+│                                    #   savedDeckIds, starredCardIds, lastDeckId, sessions, activity
 ├── progress/{cardId}                # Tiến độ thẻ: interval, ease, reps, due, known
 ├── quizAttempts/{attemptId}         # Kết quả bài kiểm tra: deckId, deckTitle, takenAt, durationSeconds, items
 └── state/learn                      # Học dở: positions, learnScores, learnRounds, flashSort, quizDraft
@@ -311,27 +297,22 @@ firebase deploy --only firestore:rules      # 2. Bật quy tắc bảo mật
 ```
 
 **Cấu hình nền tảng đã có sẵn trong repo**
-- Android: bật core library desugaring (`android/app/build.gradle.kts`); `AndroidManifest.xml` khai báo quyền `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED` và receiver của `flutter_local_notifications` để nhắc học vẫn chạy sau khi khởi động lại máy.
-- iOS: `AppDelegate.swift` gán delegate thông báo để hiện nhắc học cả khi app đang mở, và cài kênh phát âm bằng `AVSpeechSynthesizer`.
+- iOS: `AppDelegate.swift` cài kênh phát âm bằng `AVSpeechSynthesizer`.
 
 ## 10. Xử lý sự cố
 
 | Hiện tượng | Nguyên nhân / cách xử lý |
 |---|---|
-| Đăng ký báo "Đăng nhập bằng email chưa được bật cho ứng dụng" | Chưa bật Email/Password trong Firebase Authentication. |
 | Tab Khám phá trống | Chưa chạy `lib/tools/seed.dart`, hoặc chạy sau khi đã deploy rules (rules chặn tạo bộ thẻ của người khác). |
 | Công cụ seed báo `permission-denied` | Firestore không còn ở chế độ test; tạm mở quyền ghi hoặc thêm bộ thẻ mẫu qua Console. |
 | Màn hình "Không tải được dữ liệu" | Mất mạng ở lần đăng nhập đầu tiên trên máy (chưa có cache); bấm Thử lại khi có mạng. |
-| Không nhận được nhắc học | Chưa cho phép thông báo: bật lại trong Cài đặt của máy rồi tắt / bật lại công tắc Nhắc ôn tập. Android có thể nhắc lệch vài phút để tiết kiệm pin. |
 | Thẻ hiện "Ảnh không có trên thiết bị này" | Ảnh thẻ chỉ lưu trên máy đã thêm ảnh (xem mục 12). |
-| Không nhận được email đặt lại mật khẩu | Kiểm tra thư mục Spam; email chưa đăng ký sẽ không nhận được thư. |
 
 ## 11. Kiểm thử
 
 ```bash
 flutter analyze                      # Phân tích tĩnh
-flutter test                         # Unit test + widget test (126 test)
-flutter test integration_test        # Kiểm thử luồng chính, cần mở simulator / thiết bị
+flutter test                         # Unit test + widget test
 ```
 
 Tất cả test dùng Firebase giả lập (`fake_cloud_firestore`, `firebase_auth_mocks`), không gọi Firebase thật.
@@ -344,16 +325,15 @@ Tất cả test dùng Firebase giả lập (`fake_cloud_firestore`, `firebase_au
 | `firestore_repository_test.dart` | CRUD và `watchAll` của `FirestoreRepository<T>` |
 | `firestore_model_test.dart` | Chuyển model sang Firestore và đọc lại |
 | `firestore_data_store_test.dart` | Ghi / đọc đúng document trên Firestore giả lập |
-| `reminder_service_test.dart` | Đặt lịch nhắc học lặp hằng ngày, đổi giờ, hủy |
-| `widget_test.dart`, `responsive_test.dart` | Giao diện các màn hình chính, nhiều kích thước màn hình |
-| `integration_test/app_flow_test.dart` | 10 luồng chính: đăng ký, thư viện, chi tiết bộ thẻ, thẻ ghi nhớ, học theo lượt, kiểm tra, ôn tập, tạo bộ thẻ, thống kê / cá nhân, giao diện tối |
+| `widget_test.dart`, `responsive_test.dart` | Giao diện các màn hình học tập, nhiều kích thước màn hình |
+| `integration_test/app_flow_test.dart` | Các luồng học tập trên thiết bị với phiên Firebase giả đã đăng nhập |
 
 ## 12. Hạn chế và hướng phát triển
 
 - **Ảnh thẻ chưa đồng bộ:** ảnh lưu trong thư mục của app trên máy đã thêm ảnh; mở trên máy khác sẽ hiện ảnh thay thế. Hướng phát triển: lưu ảnh lên Firebase Storage.
 - **Link chia sẻ chưa mở được app:** link `flashcardandquizz.app/d/…` mới là định dạng mẫu, cần App Links / Universal Links và một trang web để hoạt động.
 - **Khám phá tải toàn bộ bộ thẻ công khai** khi đăng nhập; khi dữ liệu lớn cần phân trang.
-- **Chưa đăng nhập bằng Google / Apple**, chưa xác minh email.
+- **Các màn hình đăng nhập, đăng ký, hồ sơ và cài đặt đã được tách riêng**; người dùng mới chưa thể đăng nhập từ giao diện nhánh này.
 
 ## 13. Quy ước commit
 

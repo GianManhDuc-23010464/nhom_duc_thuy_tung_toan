@@ -14,8 +14,6 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        // flutter_local_notifications cần desugaring để đặt lịch thông báo trên Android cũ
-        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
