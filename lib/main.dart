@@ -1,17 +1,22 @@
-// main.dart - FLASHCARD APP
+// main.dart - FLASHCARD APP WITH AUTH FLOW
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'pages/home_page.dart';
 import 'pages/library_page.dart';
 import 'pages/stats_page.dart';
+import 'pages/profile_page.dart';
+import 'pages/login_page.dart';
+import 'pages/register_page.dart';
 import 'services/flashcard_service.dart';
 import 'services/auth_service.dart';
 import 'services/connectivity_service.dart';
 import 'services/data_store.dart';
+import 'services/reminder_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/common.dart';
 
@@ -44,12 +49,14 @@ class FlashcardApp extends StatefulWidget {
   final AuthService authService;
   final DataStore dataStore;
   final ConnectivityService connectivity;
+  final ReminderService? reminders;
 
   const FlashcardApp({
     super.key,
     required this.authService,
     required this.dataStore,
     required this.connectivity,
+    this.reminders,
   });
 
   @override
@@ -60,14 +67,18 @@ class _FlashcardAppState extends State<FlashcardApp> {
   late final AuthService _authService = widget.authService;
   late final FlashcardService _flashcardService = FlashcardService()..useStore(widget.dataStore);
   late final ConnectivityService _connectivity = widget.connectivity;
+  late final ReminderService _reminders = widget.reminders ?? ReminderService();
+  late final ThemeProvider _themeProvider = ThemeProvider(_onLogout);
   StreamSubscription? _authSub;
   final TabNavigator _tabs = TabNavigator();
   AuthStatus _authStatus = AuthStatus.loading;
+  bool _showLogin = true; // true: hiển thị login, false: hiển thị register
 
   final List<Widget> _pages = const [
     HomePage(),
     LibraryPage(),
     StatsPage(),
+    ProfilePage(),
   ];
 
   @override
@@ -78,8 +89,10 @@ class _FlashcardAppState extends State<FlashcardApp> {
     _authSub = _authService.authStateChanges().listen((u) {
       if (u == null && _authStatus == AuthStatus.authenticated && mounted) {
         _flashcardService.clear();
+        _cancelReminder();
         setState(() {
           _authStatus = AuthStatus.unauthenticated;
+          _showLogin = true;
         });
       }
     });
@@ -98,9 +111,11 @@ class _FlashcardAppState extends State<FlashcardApp> {
     _connectivity.start();
     try {
       final splash = Future.delayed(const Duration(milliseconds: 800)); // Splash tối thiểu
+      await _themeProvider.load();
       final user = await _authService.restoreSession();
       if (user != null) {
         await _flashcardService.loadForUser(user);
+        _syncReminder();
       }
       await splash;
       if (mounted) {
@@ -117,6 +132,25 @@ class _FlashcardAppState extends State<FlashcardApp> {
     }
   }
 
+  // Nhắc học lưu theo tài khoản: đăng nhập trên máy này thì đặt lại lịch theo cài đặt của tài khoản
+  Future<void> _syncReminder() async {
+    try {
+      if (_flashcardService.remindEnabled) {
+        await _reminders.scheduleDaily(_flashcardService.remindTime);
+      } else {
+        await _reminders.cancel();
+      }
+    } catch (e) {
+      debugPrint('❌ Không đặt được lịch nhắc học: $e');
+    }
+  }
+
+  Future<void> _cancelReminder() async {
+    try {
+      await _reminders.cancel();
+    } catch (_) {}
+  }
+
   // Firestore đã đẩy xong các kết quả làm khi mất mạng
   void _onSynced(int n) {
     rootMessengerKey.currentState?.showSnackBar(
@@ -124,33 +158,70 @@ class _FlashcardAppState extends State<FlashcardApp> {
     );
   }
 
+  // Đăng nhập / đăng ký thành công: tải dữ liệu của tài khoản rồi vào Trang chủ
+  Future<void> _onAuthenticated(String message) async {
+    final user = await _authService.getCurrentUser();
+    if (user == null) return;
+    try {
+      await _flashcardService.loadForUser(user);
+      _syncReminder();
+    } catch (e) {
+      rootMessengerKey.currentState?.showSnackBar(
+        const SnackBar(content: Text("Không tải được dữ liệu học tập. Vui lòng thử lại.")),
+      );
+      return;
+    }
+    if (!mounted) return;
+    _tabs.go(0);
+    setState(() => _authStatus = AuthStatus.authenticated);
+    rootMessengerKey.currentState?.showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+    );
+  }
+
+  // Đăng xuất
+  Future<void> _onLogout() async {
+    await _cancelReminder();
+    await _authService.logout();
+    _flashcardService.clear();
+    if (!mounted) return;
+    setState(() {
+      _authStatus = AuthStatus.unauthenticated;
+      _showLogin = true;
+    });
+    rootMessengerKey.currentState?.showSnackBar(const SnackBar(content: Text("Đã đăng xuất")));
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider.value(value: _themeProvider),
         ChangeNotifierProvider.value(value: _flashcardService),
         ChangeNotifierProvider.value(value: _connectivity),
         ChangeNotifierProvider.value(value: _tabs),
         Provider.value(value: _authService),
+        Provider.value(value: _reminders),
       ],
-      child: MaterialApp(
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
             title: 'Flashcard And Quizz',
             debugShowCheckedModeBanner: false,
             scaffoldMessengerKey: rootMessengerKey,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
-            themeMode: ThemeMode.system,
+            themeMode: themeProvider.themeMode,
             // Chạm ra ngoài ô nhập để ẩn bàn phím
             builder: (context, child) => GestureDetector(
               behavior: HitTestBehavior.translucent,
               onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
               child: child,
             ),
-            home: Builder(
-              builder: (context) => _buildCurrentPage(Theme.of(context).brightness == Brightness.dark),
-            ),
-          ),
+            home: _buildCurrentPage(themeProvider.isDark(context)),
+          );
+        },
+      ),
     );
   }
 
@@ -161,10 +232,14 @@ class _FlashcardAppState extends State<FlashcardApp> {
         return _buildLoadingScreen(isDark);
 
       case AuthStatus.unauthenticated:
-        return Scaffold(
-          body: Center(
-            child: Text('Màn hình đăng nhập và đăng ký đang được tách riêng.'),
-          ),
+        return _showLogin
+            ? LoginPage(
+          onLoginSuccess: () => _onAuthenticated('Đăng nhập thành công'),
+          onNavigateToRegister: () => setState(() => _showLogin = false),
+        )
+            : RegisterPage(
+          onRegisterSuccess: () => _onAuthenticated('Đã tạo tài khoản. Chào mừng bạn!'),
+          onNavigateToLogin: () => setState(() => _showLogin = true),
         );
 
       case AuthStatus.authenticated:
@@ -264,7 +339,7 @@ class _FlashcardAppState extends State<FlashcardApp> {
 
 // Điều hướng giữa các tab chính; Thư viện có thể mở sẵn một tab con
 class TabNavigator extends ChangeNotifier {
-  static const int home = 0, library = 1, stats = 2;
+  static const int home = 0, library = 1, stats = 2, profile = 3;
 
   int _index = 0;
   int get index => _index;
@@ -289,4 +364,37 @@ class TabNavigator extends ChangeNotifier {
     _focusSearch = false;
     return r;
   }
+}
+
+// Provider quản lý giao diện sáng/tối và đăng xuất
+class ThemeProvider extends ChangeNotifier {
+  static const String _key = 'sm_appearance';
+  final Future<void> Function() onLogout;
+  ThemeMode _themeMode = ThemeMode.system;
+
+  ThemeProvider(this.onLogout);
+
+  ThemeMode get themeMode => _themeMode;
+
+  bool isDark(BuildContext context) =>
+      _themeMode == ThemeMode.dark ||
+      (_themeMode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+
+  Future<void> load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_key);
+    if (saved != null) {
+      _themeMode = ThemeMode.values.firstWhere((m) => m.name == saved, orElse: () => ThemeMode.system);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    _themeMode = mode;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_key, mode.name);
+  }
+
+  Future<void> logout() => onLogout();
 }

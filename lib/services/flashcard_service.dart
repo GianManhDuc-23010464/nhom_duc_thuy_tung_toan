@@ -475,6 +475,10 @@ class FlashcardService with ChangeNotifier {
     });
   }
 
+  // Xóa một kết quả kiểm tra khỏi lịch sử
+  Future<bool> deleteAttempt(String attemptId) =>
+      _commit(() => _data.quizHistory.removeWhere((a) => a.id == attemptId), (s, uid) => s.deleteAttempt(uid, attemptId));
+
   Future<bool> saveQuizDraft(QuizDraft draft) => _commit(() => _data.quizDraft = draft, _learnState);
   Future<bool> clearQuizDraft() => _commit(() => _data.quizDraft = null, _learnState);
 
@@ -483,6 +487,28 @@ class FlashcardService with ChangeNotifier {
   int get streak => computeStreak(_data, today);
   int get todayCount => countOn(_data, today);
   int get dailyGoal => _data.dailyGoal;
+  bool get remindEnabled => _data.remindEnabled;
+  String get remindTime => _data.remindTime;
 
+  Future<bool> setDailyGoal(int goal) => _commit(() => _data.dailyGoal = goal, _profile);
 
+  Future<bool> setReminder({required bool enabled, String? time}) => _commit(() {
+    _data.remindEnabled = enabled;
+    if (time != null) _data.remindTime = time;
+  }, _profile);
+
+  // Đổi tên hiển thị (Firebase Auth đã cập nhật ở AuthService): cập nhật tên tác giả trên các bộ thẻ của tôi
+  Future<bool> applyProfile(User updated, int goal) {
+    final renamed = updated.username != _user?.username;
+    _user = updated;
+    return _commit(() {
+      _data.dailyGoal = goal;
+      for (final d in myDecks) {
+        d.ownerName = updated.username;
+      }
+    }, (s, uid) async {
+      await s.saveProfile(uid, _data);
+      if (renamed) await s.renameOwner(uid, updated.username);
+    }, decks: true);
+  }
 }

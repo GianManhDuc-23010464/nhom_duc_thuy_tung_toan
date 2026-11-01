@@ -39,29 +39,45 @@ void main() {
     await settle(t);
   }
 
-  testWidgets('Các luồng học tập Flashcard And Quizz', (t) async {
+  testWidgets('10 luồng Flashcard And Quizz', (t) async {
     // Firestore giả có sẵn các bộ thẻ công khai mẫu cho tab Khám phá
     final db = FakeFirebaseFirestore();
     await seedCommunityDecks(db);
-    final auth = MockFirebaseAuth(
-      signedIn: true,
-      mockUser: MockUser(
-        uid: 'integration-user',
-        email: 'integration@flashcardquizz.vn',
-        displayName: 'Kiểm Thử',
-      ),
-    );
     await t.pumpWidget(app.FlashcardApp(
-      authService: AuthService(auth: auth, db: db),
+      authService: AuthService(auth: MockFirebaseAuth(), db: db),
       dataStore: FirestoreDataStore(db),
       connectivity: ConnectivityService(),
     ));
-    // Test các luồng học tập bằng một phiên Firebase giả đã đăng nhập sẵn.
-    for (var i = 0; i < 100 && find.text('Bắt đầu với bộ thẻ đầu tiên').evaluate().isEmpty; i++) {
+    // Chờ qua màn khởi động (khôi phục phiên đăng nhập)
+    for (var i = 0; i < 100 && find.text('Đăng ký ngay').evaluate().isEmpty && find.text('Cá nhân').evaluate().isEmpty; i++) {
       await settle(t, 200);
     }
+
+    // Phiên cũ còn đăng nhập thì đăng xuất trước
+    if (find.text('Cá nhân').evaluate().isNotEmpty) {
+      await t.tap(find.text('Cá nhân'));
+      await settle(t);
+      await t.tap(find.byTooltip('Đăng xuất'));
+      await settle(t);
+      await tapText(t, 'Đăng xuất', last: true);
+      await settle(t, 1000);
+    }
+    expect(FlashcardService().isLoaded, isFalse);
+
+    // ===== Luồng 1: Đăng ký =====
+    await tapText(t, 'Đăng ký ngay');
+    final email = 'test${DateTime.now().millisecondsSinceEpoch}@flashcardquizz.vn';
+    final fields = find.byType(TextFormField);
+    await t.enterText(fields.at(0), 'Kiểm Thử');
+    await t.enterText(fields.at(1), email);
+    await t.enterText(fields.at(2), '123456');
+    await t.enterText(fields.at(3), '123456');
+    await t.tap(find.byType(Checkbox));
+    await settle(t);
+    await tapText(t, 'ĐĂNG KÝ');
+    await settle(t, 3000);
     expect(find.text('Bắt đầu với bộ thẻ đầu tiên'), findsOneWidget);
-    await screen(t, '01_home_new_user');
+    await screen(t, '02_home_new_user');
 
     // ===== Luồng 3: Thư viện › Khám phá, lưu bộ thẻ =====
     await tapText(t, 'Khám phá thư viện công khai');
@@ -169,12 +185,45 @@ void main() {
     await t.pageBack();
     await settle(t, 800);
 
-    // ===== Luồng thống kê =====
+    // ===== Luồng 10: Thống kê, Cá nhân =====
     await t.tap(find.text('Thống kê'));
     await settle(t, 800);
-    await screen(t, 'stats');
+    await screen(t, '10_stats');
     await t.drag(find.byType(SingleChildScrollView).first, const Offset(0, -700));
-    await screen(t, 'stats_chart');
+    await screen(t, '10_stats_chart');
+    await t.tap(find.text('Cá nhân'));
+    await settle(t, 800);
+    await screen(t, '10_profile');
+    await t.tap(find.text('Thư viện'));
+    await settle(t, 800);
+    await screen(t, '03_library_mine');
 
+    // ===== Chế độ tối =====
+    await t.tap(find.text('Cá nhân'));
+    await settle(t, 600);
+    await tapText(t, 'Giao diện');
+    await tapText(t, 'Tối', last: true);
+    await settle(t, 800);
+    await screen(t, '11_dark_profile');
+    await t.tap(find.text('Trang chủ'));
+    await settle(t, 800);
+    await screen(t, '11_dark_home');
+    await tapText(t, 'Lập trình Dart cơ bản');
+    await settle(t, 800);
+    await screen(t, '11_dark_detail');
+    await tapText(t, 'Học tiếp');
+    await settle(t, 800);
+    await t.tap(find.byType(GestureDetector).at(1));
+    await screen(t, '11_dark_flashcard');
+    await t.tap(find.byIcon(Icons.close));
+    await settle(t);
+    if (find.text('Thoát').evaluate().isNotEmpty) await tapText(t, 'Thoát');
+    await t.pageBack();
+    await settle(t, 600);
+    await t.tap(find.text('Cá nhân'));
+    await settle(t, 600);
+    await tapText(t, 'Giao diện');
+    await tapText(t, 'Theo hệ thống', last: true);
+    await settle(t, 800);
   });
 }
