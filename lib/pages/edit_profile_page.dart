@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/flashcard_service.dart';
 import '../widgets/common.dart';
 
+// Sửa tên hiển thị và mục tiêu số thẻ mỗi ngày
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
 
@@ -26,6 +27,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _nameController.addListener(() => _dirty = true);
   }
 
+  // Kiểm tra tên, cập nhật qua AuthService rồi áp dụng hồ sơ vào FlashcardService
   Future<void> _save() async {
     if (_saving) return;
     final name = _nameController.text.trim();
@@ -50,6 +52,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     Navigator.pop(context);
   }
 
+  // Có thay đổi chưa lưu thì hỏi xác nhận trước khi thoát
   Future<void> _close() async {
     if (!_dirty || await confirmDiscardChanges(context)) {
       if (mounted) Navigator.of(context).pop();

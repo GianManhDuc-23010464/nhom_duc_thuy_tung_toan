@@ -9,6 +9,7 @@ import '../utils/date_utils.dart';
 import '../widgets/common.dart';
 import 'answer_review_page.dart';
 
+// Danh sách các lần làm bài, mới nhất ở trên
 class QuizHistoryPage extends StatelessWidget {
   const QuizHistoryPage({super.key});
 
@@ -44,6 +45,7 @@ class QuizHistoryPage extends StatelessWidget {
   }
 }
 
+// Một dòng lịch sử; màu theo kết quả: ≥ 80% xanh, ≥ 50% cam, còn lại đỏ
 class QuizHistoryTile extends StatelessWidget {
   final QuizAttempt attempt;
   const QuizHistoryTile({super.key, required this.attempt});

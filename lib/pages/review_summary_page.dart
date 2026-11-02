@@ -7,6 +7,7 @@ import '../utils/date_utils.dart';
 import '../widgets/common.dart';
 import 'review_page.dart';
 
+// Tổng kết phiên ôn tập: số thẻ đã ôn, số thẻ chọn Quên và thời gian
 class ReviewSummaryPage extends StatelessWidget {
   final int reviewed;
   final int again;

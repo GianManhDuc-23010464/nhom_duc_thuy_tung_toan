@@ -7,6 +7,7 @@ import '../services/flashcard_service.dart';
 import '../utils/date_utils.dart';
 import '../widgets/common.dart';
 
+// Xem lại từng câu của một lần làm bài, có lọc theo câu sai hoặc bỏ trống
 class AnswerReviewPage extends StatefulWidget {
   final String attemptId;
   const AnswerReviewPage({super.key, required this.attemptId});
@@ -78,6 +79,7 @@ class _AnswerReviewPageState extends State<AnswerReviewPage> {
     );
   }
 
+  // Thẻ hiển thị một câu: nhãn Đúng / Bỏ trống / Sai theo kết quả trả lời
   Widget _buildItem(int i, QuizAnswerItem x) {
     final q = x.question;
     final (label, color) = x.isCorrect

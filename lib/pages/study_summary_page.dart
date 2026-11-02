@@ -9,6 +9,7 @@ import '../widgets/common.dart';
 import 'learn_page.dart';
 import 'quiz_setup_page.dart';
 
+// Tổng kết phiên học thẻ ghi nhớ: số thẻ đã xem, đã biết, đang học và thời gian
 class StudySummaryPage extends StatelessWidget {
   final String deckId;
   final int total;

@@ -8,6 +8,7 @@ import '../widgets/common.dart';
 import 'add_edit_flashcard_page.dart';
 import '../utils/nav.dart';
 
+// Bước 2 khi tạo bộ thẻ, đồng thời là màn quản lý và sắp xếp thẻ của bộ đã có
 class DeckCardsPage extends StatefulWidget {
   final String deckId;
   const DeckCardsPage({super.key, required this.deckId});
@@ -19,16 +20,19 @@ class DeckCardsPage extends StatefulWidget {
 class _DeckCardsPageState extends State<DeckCardsPage> {
   bool _isSaving = false;
 
+  // Mở form thêm thẻ mới
   void _addCard() => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => AddEditFlashcardPage(deckId: widget.deckId)),
       );
 
+  // Mở form sửa thẻ đang chọn
   void _editCard(Flashcard card) => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => AddEditFlashcardPage(deckId: widget.deckId, card: card)),
       );
 
+  // Xóa thẻ; ghi lỗi thì hiện thông báo kèm nút thử lại
   Future<void> _deleteCard(FlashcardService service, Flashcard card) async {
     final ok = await confirmDialog(
       context,
@@ -45,6 +49,7 @@ class _DeckCardsPageState extends State<DeckCardsPage> {
     }
   }
 
+  // Bộ nháp: hoàn tất để sẵn sàng học; bộ đã có: chỉ quay lại
   Future<void> _finish(FlashcardService service) async {
     final deck = service.deckById(widget.deckId)!;
     if (!deck.isDraft) {

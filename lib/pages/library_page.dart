@@ -11,6 +11,7 @@ import '../widgets/common.dart';
 import '../widgets/set_card.dart';
 import 'add_set_page.dart';
 
+// Thư viện gồm 3 tab: Của tôi, Đã lưu, Khám phá; có tìm kiếm, lọc môn và sắp xếp
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
 
@@ -111,6 +112,7 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
     );
   }
 
+  // Bộ lọc theo môn học
   Widget _buildFilters() {
     return SizedBox(
       height: 48,
@@ -132,10 +134,12 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
     );
   }
 
+  // Lấy danh sách theo tab, rồi lọc theo từ khóa, môn học và sắp xếp
   Widget _buildList(FlashcardService service) {
     final tab = _tabKeys[_tabController.index];
     List<FlashcardSet> available;
     List<String> missing = [];
+    // Tab Đã lưu: bộ đã bị xóa hoặc không còn truy cập được đưa vào danh sách missing
     if (tab == 'mine') {
       available = service.myDecks;
     } else if (tab == 'saved') {
@@ -239,6 +243,7 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
     );
   }
 
+  // Trạng thái rỗng riêng của từng tab
   Widget _buildTabEmpty(String tab) {
     switch (tab) {
       case 'mine':
@@ -268,6 +273,7 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
     }
   }
 
+  // Lưu hoặc bỏ lưu một bộ thẻ; ghi lỗi thì cho phép thử lại
   Future<void> _toggleSave(FlashcardService service, String id) async {
     final wasSaved = service.isSaved(id);
     if (await service.toggleSave(id)) {
@@ -277,6 +283,7 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
     }
   }
 
+  // Mở màn tạo bộ thẻ mới
   Future<void> _createSet() =>
       Navigator.push(context, MaterialPageRoute(builder: (_) => const AddSetPage()));
 
