@@ -12,6 +12,7 @@ import 'forgot_password_page.dart';
 import 'quiz_history_page.dart';
 import '../services/reminder_service.dart';
 import 'ListFlashcardSet.dart';
+import 'sample_layout_page.dart';
 import 'ListQuizAttempt.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -241,6 +242,13 @@ class _ProfilePageState extends State<ProfilePage> {
           "Xem, xóa kết quả hoặc làm bài mới",
           null,
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ListQuizAttempt())),
+        ),
+        _buildSettingItem(
+          Icons.dashboard_outlined,
+          "Màn hình mẫu",
+          "Layout theo yêu cầu giảng viên",
+          null,
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SampleLayoutPage())),
         ),
         _buildSettingItem(
           Icons.dark_mode,
